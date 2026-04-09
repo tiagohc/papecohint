@@ -1,5 +1,14 @@
 "use client";
 import { useEffect, useState } from "react";
+import {
+  adminTableInputStyle,
+  adminTableCellStyle,
+  adminTableContainerStyle,
+  adminTableHeaderCellStyle,
+  adminTableHeadRowStyle,
+  adminTableRowStyle,
+  adminTableStyle,
+} from "../components/tableStyles";
 
 type Product = {
   id: number;
@@ -18,7 +27,7 @@ export default function StocksPage() {
 
   const fetchProducts = () => {
     if (!token) return;
-    fetch(`http://localhost:8000/admin/rewards`, {
+    fetch(`/api/admin/rewards`, {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then(res => res.json())
@@ -30,7 +39,7 @@ export default function StocksPage() {
 
   const handleStockChange = async (id: number, stock: number) => {
     if (!token) return;
-    await fetch(`http://localhost:8000/admin/rewards/${id}`, {
+    await fetch(`/api/admin/rewards/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify({ stock }),
@@ -43,35 +52,37 @@ export default function StocksPage() {
   return (
     <div style={{ padding: 40 }}>
       <h1>Gestão de Stocks</h1>
-      <table style={{ width: "100%", borderCollapse: "collapse" }}>
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Nome</th>
-            <th>Parceiro</th>
-            <th>Pontos</th>
-            <th>Stock</th>
-          </tr>
-        </thead>
-        <tbody>
-          {products.map(p => (
-            <tr key={p.id}>
-              <td>{p.id}</td>
-              <td>{p.name}</td>
-              <td>{p.partner_name}</td>
-              <td>{p.points}</td>
-              <td>
+      <div style={adminTableContainerStyle}>
+        <table style={adminTableStyle}>
+          <thead>
+            <tr style={adminTableHeadRowStyle}>
+              <th style={adminTableHeaderCellStyle}>ID</th>
+              <th style={adminTableHeaderCellStyle}>Nome</th>
+              <th style={adminTableHeaderCellStyle}>Parceiro</th>
+              <th style={adminTableHeaderCellStyle}>Pontos</th>
+              <th style={adminTableHeaderCellStyle}>Stock</th>
+            </tr>
+          </thead>
+          <tbody>
+            {products.map((p, idx) => (
+              <tr key={p.id} style={adminTableRowStyle(idx)}>
+                <td style={adminTableCellStyle}>{p.id}</td>
+                <td style={adminTableCellStyle}>{p.name}</td>
+                <td style={adminTableCellStyle}>{p.partner_name}</td>
+                <td style={adminTableCellStyle}>{p.points}</td>
+                <td style={adminTableCellStyle}>
                 <input
                   type="number"
                   value={p.stock}
                   onChange={(e) => handleStockChange(p.id, Number(e.target.value))}
-                  style={{ width: 60 }}
+                  style={adminTableInputStyle}
                 />
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

@@ -1,18 +1,45 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { useLanguage } from "@/app/components/LanguageProvider";
+import { useTheme } from "next-themes";
 
 export default function AuthForm() {
   const { t, setLanguage, language } = useLanguage();
+  const { setTheme } = useTheme();
   const [isRegister, setIsRegister] = useState(false);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [preferredLanguage, setPreferredLanguage] = useState<'pt' | 'en'>('pt');
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [langOpen, setLangOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const languages = [
+    { code: "pt" as const, label: t("Português"), short: "PT" },
+    { code: "en" as const, label: "English", short: "EN" },
+  ];
+
+  useEffect(() => {
+    // Login must always open in default light mode.
+    setTheme("light");
+    localStorage.removeItem("theme");
+  }, [setTheme]);
+
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setLangOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  const currentLang = languages.find((l) => l.code === language) || languages[0];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,7 +49,7 @@ export default function AuthForm() {
     try {
       if (isRegister) {
         // Criar conta
-        const res = await fetch("http://localhost:8000/register", {
+        const res = await fetch("/api/register", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ name, email, password }),
@@ -30,13 +57,13 @@ export default function AuthForm() {
 
         const data = await res.json();
         if (!res.ok) {
-          setError(data.error || "Erro ao criar conta");
+          setError(data.error || t("Erro ao criar conta"));
           setLoading(false);
           return;
         }
 
         // login automático após registro
-        const loginRes = await fetch("http://localhost:8000/login", {
+        const loginRes = await fetch("/api/login", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email, password }),
@@ -44,18 +71,24 @@ export default function AuthForm() {
 
         const loginData = await loginRes.json();
         if (!loginRes.ok) {
-          setError(loginData.error || "Erro ao entrar");
+          setError(loginData.error || t("Erro ao entrar"));
           setLoading(false);
           return;
         }
 
         localStorage.setItem("token", loginData.token);
         const payload = JSON.parse(atob(loginData.token.split(".")[1]));
-        window.location.href = payload.role === "admin" ? "/admin/users" : "/user";
+        if (payload.role === "admin") {
+          window.location.href = "/admin/users";
+        } else if (payload.role === "partner") {
+          window.location.href = "/partner";
+        } else {
+          window.location.href = "/user";
+        }
 
       } else {
         // Login
-        const res = await fetch("http://localhost:8000/login", {
+        const res = await fetch("/api/login", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email, password }),
@@ -63,20 +96,26 @@ export default function AuthForm() {
 
         const data = await res.json();
         if (!res.ok) {
-          setError(data.error || "Erro no login");
+          setError(data.error || t("Erro no login"));
           setLoading(false);
           return;
         }
 
         localStorage.setItem("token", data.token);
         const payload = JSON.parse(atob(data.token.split(".")[1]));
-        window.location.href = payload.role === "admin" ? "/admin/users" : "/user";
+        if (payload.role === "admin") {
+          window.location.href = "/admin/users";
+        } else if (payload.role === "partner") {
+          window.location.href = "/partner";
+        } else {
+          window.location.href = "/user";
+        }
       }
 
     } catch (err) {
       console.error(err);
       setLoading(false);
-      setError("Erro ao conectar com o servidor");
+      setError(t("Erro ao conectar com o servidor"));
     }
   };
 
@@ -94,21 +133,72 @@ export default function AuthForm() {
       }}
     >
       <div style={{ position: "absolute", top: 20, right: 20, display: "flex", flexDirection: "column", alignItems: "flex-end" }}>
-        <label style={{ fontSize: 12, marginBottom: 5, color: "#333" }}>{t("Selecionar idioma")}</label>
-        <select
-          value={language}
-          onChange={(e) => setLanguage(e.target.value as 'pt' | 'en')}
-          style={{
-            padding: "8px 12px",
-            borderRadius: 6,
-            border: "1px solid #ccc",
-            fontSize: 14,
-            cursor: "pointer",
-          }}
-        >
-          <option value="pt">{t("Português")}</option>
-          <option value="en">{t("Inglês")}</option>
-        </select>
+        <label style={{ fontSize: 12, marginBottom: 8, color: "#333" }}>{t("Selecionar idioma")}</label>
+        <div ref={dropdownRef} style={{ position: "relative" }}>
+          <button
+            onClick={() => setLangOpen(!langOpen)}
+            title="Idioma / Language"
+            style={{
+              width: 38,
+              height: 38,
+              borderRadius: "50%",
+              border: "1px solid #d1d5db",
+              background: "#ffffff",
+              color: "#111827",
+              cursor: "pointer",
+              display: "grid",
+              placeItems: "center",
+              fontSize: 13,
+              fontWeight: 700,
+            }}
+          >
+            {currentLang.short}
+          </button>
+
+          {langOpen && (
+            <div
+              style={{
+                position: "absolute",
+                top: 44,
+                right: 0,
+                background: "#fff",
+                border: "1px solid #d1d5db",
+                borderRadius: 8,
+                boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+                zIndex: 1000,
+                minWidth: 160,
+                overflow: "hidden",
+              }}
+            >
+              {languages.map((lang) => (
+                <button
+                  key={lang.code}
+                  onClick={() => {
+                    setLanguage(lang.code);
+                    setLangOpen(false);
+                  }}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    width: "100%",
+                    padding: "10px 14px",
+                    border: "none",
+                    background: language === lang.code ? "#f3f4f6" : "transparent",
+                    color: "#111827",
+                    cursor: "pointer",
+                    fontSize: 14,
+                    textAlign: "left",
+                  }}
+                >
+                  <span style={{ fontSize: 13, fontWeight: 700, minWidth: 24 }}>{lang.short}</span>
+                  <span>{lang.label}</span>
+                  {language === lang.code && <span style={{ marginLeft: "auto" }}>✓</span>}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       <div style={{ marginBottom: 40 }}>

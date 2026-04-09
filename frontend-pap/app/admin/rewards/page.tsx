@@ -2,6 +2,18 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useLanguage } from "@/app/components/LanguageProvider";
+import {
+  adminActionDangerButtonStyle,
+  adminActionPrimaryButtonStyle,
+  adminTopActionButtonStyle,
+  adminTableCellStyle,
+  adminTableContainerStyle,
+  adminTableHeaderCellStyle,
+  adminTableHeadRowStyle,
+  adminTableRowStyle,
+  adminTableStyle,
+} from "../components/tableStyles";
 
 type Reward = {
   id: number;
@@ -14,6 +26,7 @@ type Reward = {
 };
 
 export default function AdminRewards() {
+  const { t } = useLanguage();
   const [rewards, setRewards] = useState<Reward[]>([]);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
@@ -25,7 +38,7 @@ export default function AdminRewards() {
       return;
     }
     try {
-      const res = await fetch("http://localhost:8000/admin/rewards", {
+      const res = await fetch("/api/admin/rewards", {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -44,9 +57,9 @@ export default function AdminRewards() {
 
   const deleteReward = async (id: number) => {
     if (!token) return;
-    if (!confirm("Tem a certeza que quer remover este reward?")) return;
+    if (!confirm(t("Tem a certeza que quer remover este reward?"))) return;
     try {
-      await fetch(`http://localhost:8000/admin/rewards/${id}`, {
+      await fetch(`/api/admin/rewards/${id}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -59,62 +72,54 @@ export default function AdminRewards() {
   if (loading)
     return (
       <div style={{ padding: 40, color: "#1e293b" }}>
-        <p>Carregando rewards...</p>
+        <p>{t("Carregando rewards...")}</p>
       </div>
     );
 
   return (
     <div style={{ padding: 40, backgroundColor: "#f0fdf4", minHeight: "100vh" }}>
-      <h1 style={{ color: "#1e293b", marginBottom: 20 }}>Painel Admin - Rewards</h1>
+      <h1 style={{ color: "#1e293b", marginBottom: 20 }}>{t("Painel Admin - Rewards")}</h1>
 
-      <div
-        style={{
-          backgroundColor: "#fff",
-          borderRadius: 10,
-          padding: 20,
-          boxShadow: "0 2px 12px rgba(0,0,0,0.1)",
-          overflowX: "auto",
-        }}
-      >
-        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+      <div style={adminTableContainerStyle}>
+        <table style={adminTableStyle}>
           <thead>
-            <tr style={{ backgroundColor: "#1e293b", color: "#fff" }}>
-              <th>ID</th>
-              <th>Nome</th>
-              <th>Parceiro</th>
-              <th>Pontos</th>
-              <th>Stock</th>
-              <th>Foto</th>
-              <th>Ações</th>
+            <tr style={adminTableHeadRowStyle}>
+              <th style={adminTableHeaderCellStyle}>{t("ID")}</th>
+              <th style={adminTableHeaderCellStyle}>{t("Nome")}</th>
+              <th style={adminTableHeaderCellStyle}>{t("Parceiro")}</th>
+              <th style={adminTableHeaderCellStyle}>{t("Pontos")}</th>
+              <th style={adminTableHeaderCellStyle}>{t("Stock")}</th>
+              <th style={adminTableHeaderCellStyle}>{t("Foto")}</th>
+              <th style={adminTableHeaderCellStyle}>{t("Ações")}</th>
             </tr>
           </thead>
           <tbody>
             {rewards.map((r, i) => (
-              <tr key={r.id} style={{ backgroundColor: i % 2 === 0 ? "#f0fdf4" : "#d9f2d9" }}>
-                <td>{r.id}</td>
-                <td>{r.name}</td>
-                <td>{r.partner_name}</td>
-                <td>{r.points}</td>
-                <td>{r.stock}</td>
-                <td>
+              <tr key={r.id} style={adminTableRowStyle(i)}>
+                <td style={adminTableCellStyle}>{r.id}</td>
+                <td style={adminTableCellStyle}>{r.name}</td>
+                <td style={adminTableCellStyle}>{r.partner_name}</td>
+                <td style={adminTableCellStyle}>{r.points}</td>
+                <td style={adminTableCellStyle}>{r.stock}</td>
+                <td style={adminTableCellStyle}>
                   {r.image_url ? (
                     <img src={r.image_url} alt={r.name} style={{ width: 50, height: 50, objectFit: "cover", borderRadius: 5 }} />
                   ) : (
                     "—"
                   )}
                 </td>
-                <td>
+                <td style={adminTableCellStyle}>
                   <button
                     onClick={() => router.push(`/admin/rewards/${r.id}`)}
-                    style={{ marginRight: 8, padding: "6px 12px", backgroundColor: "#2e7d32", color: "#fff", border: "none", borderRadius: 5 }}
+                    style={{ ...adminActionPrimaryButtonStyle, marginRight: 8 }}
                   >
-                    Editar
+                    {t("Editar")}
                   </button>
                   <button
                     onClick={() => deleteReward(r.id)}
-                    style={{ padding: "6px 12px", backgroundColor: "#e53935", color: "#fff", border: "none", borderRadius: 5 }}
+                    style={adminActionDangerButtonStyle}
                   >
-                    Deletar
+                    {t("Deletar")}
                   </button>
                 </td>
               </tr>
@@ -124,18 +129,10 @@ export default function AdminRewards() {
       </div>
 
       <button
-        style={{
-          marginTop: 20,
-          padding: "12px 20px",
-          backgroundColor: "#2e7d32",
-          color: "#fff",
-          border: "none",
-          borderRadius: 8,
-          cursor: "pointer",
-        }}
+        style={{ ...adminTopActionButtonStyle, marginTop: 20 }}
         onClick={() => router.push("/admin/rewards/new")}
       >
-        Novo Reward
+        {t("Novo Reward")}
       </button>
     </div>
   );

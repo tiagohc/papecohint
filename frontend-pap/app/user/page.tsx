@@ -4,6 +4,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { carbonSavedFromPoints, getLevelFromPoints } from "@/lib/progress";
+import { useLanguage } from "@/app/components/LanguageProvider";
 
 type User = {
   id: number;
@@ -21,6 +22,7 @@ type Reward = {
 };
 
 export default function UserPage() {
+  const { t } = useLanguage();
   const [user, setUser] = useState<User | null>(null);
   const [userPoints, setUserPoints] = useState(0);
   const [missionsCompleted, setMissionsCompleted] = useState(0);
@@ -47,7 +49,7 @@ export default function UserPage() {
     }
 
     // Get user info
-    fetch("http://localhost:8000/me", {
+    fetch("/api/me", {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then(r => r.json())
@@ -55,7 +57,7 @@ export default function UserPage() {
       .catch(console.error);
 
     // Get rewards
-    fetch("http://localhost:8000/admin/rewards", {
+    fetch("/api/admin/rewards", {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then(r => r.json())
@@ -85,7 +87,7 @@ export default function UserPage() {
   const levelInfo = getLevelFromPoints(userPoints);
   const carbonSaved = carbonSavedFromPoints(userPoints);
 
-  if (loading) return <p>Carregando...</p>;
+  if (loading) return <p>{t("Carregando...")}</p>;
 
   return (
     <div style={{ padding: 40, maxWidth: 1200, margin: "0 auto" }}>
@@ -99,7 +101,7 @@ export default function UserPage() {
         }}
       >
         <div style={cardStyle}>
-          <p style={{ margin: 0, color: "#666", fontSize: 12 }}>ECOPOINTS</p>
+          <p style={{ margin: 0, color: "#666", fontSize: 12 }}>{t("ECOPOINTS")}</p>
           <p style={{ margin: "10px 0 0 0", fontSize: 32, fontWeight: "bold", color: "#22c55e" }}>
             {userPoints.toLocaleString()}
           </p>
@@ -115,65 +117,39 @@ export default function UserPage() {
             onMouseOver={e => (e.currentTarget.style.transform = "scale(1.02)")}
             onMouseOut={e => (e.currentTarget.style.transform = "scale(1)")}
           >
-            <p style={{ margin: 0, color: "#666", fontSize: 12 }}>MISSÕES COMPLETAS</p>
+            <p style={{ margin: 0, color: "#666", fontSize: 12 }}>{t("MISSÕES COMPLETAS")}</p>
             <p style={{ margin: "10px 0 0 0", fontSize: 32, fontWeight: "bold", color: "#3b82f6" }}>
               {missionsCompleted}
             </p>
           </div>
         ) : (
           <div style={{ ...cardStyle, backgroundColor: "#f9fafb" }}>
-            <p style={{ margin: 0, color: "#666", fontSize: 12 }}>MISSÕES COMPLETAS</p>
+            <p style={{ margin: 0, color: "#666", fontSize: 12 }}>{t("MISSÕES COMPLETAS")}</p>
             <p style={{ margin: "10px 0 0 0", fontSize: 16, fontWeight: "bold", color: "#3b82f6" }}>
-              Nenhuma missão completa
+              {t("Nenhuma missão completa")}
             </p>
           </div>
         )}
         <div style={cardStyle}>
-          <p style={{ margin: 0, color: "#666", fontSize: 12 }}>PEGADA DE CARBONO</p>
+          <p style={{ margin: 0, color: "#666", fontSize: 12 }}>{t("PEGADA DE CARBONO")}</p>
           <p style={{ margin: "10px 0 0 0", fontSize: 32, fontWeight: "bold", color: "#f59e0b" }}>
             {carbonSaved.toFixed(1)} kg
           </p>
         </div>
         <div style={cardStyle}>
-          <p style={{ margin: 0, color: "#666", fontSize: 12 }}>NÍVEL</p>
+          <p style={{ margin: 0, color: "#666", fontSize: 12 }}>{t("NÍVEL")}</p>
           <p style={{ margin: "10px 0 0 0", fontSize: 32, fontWeight: "bold", color: "#ec4899" }}>
             {levelInfo.level}
           </p>
           <p style={{ margin: "5px 0 0 0", fontSize: 12, color: "#666" }}>
-            Progresso: {(levelInfo.progress * 100).toFixed(0)}%
+            {t("Progresso:")} {(levelInfo.progress * 100).toFixed(0)}%
           </p>
-        </div>
-      </div>
-
-      {/* Quick Actions */}
-      <div style={cardStyle}>
-        <h2 style={{ margin: "0 0 15px 0" }}>Ações Rápidas</h2>
-        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-          <button 
-            style={buttonStyle}
-            onClick={() => router.push("/user/missions")}
-          >
-            Ver Missões
-          </button>
-          <button 
-            style={buttonStyle}
-            onClick={() => router.push("/user/loja-pontos")}
-          >
-            Loja de Pontos
-          </button>
-          <button 
-            style={buttonStyle}
-            onClick={() => router.push("/user/impacto-ambiental")}
-          >
-            Meu Impacto
-          </button>
-          <button style={buttonStyle}>Configurações</button>
         </div>
       </div>
 
       {/* Rewards */}
       <div style={cardStyle}>
-        <h2 style={{ margin: "0 0 20px 0" }}>Rewards Disponíveis</h2>
+        <h2 style={{ margin: "0 0 20px 0" }}>{t("Rewards Disponíveis")}</h2>
         <div
           style={{
             display: "grid",
@@ -193,7 +169,7 @@ export default function UserPage() {
             >
               <h3 style={{ margin: "0 0 5px 0", fontSize: 16 }}>{reward.name}</h3>
               <p style={{ margin: 0, color: "#666", fontSize: 12 }}>
-                {reward.partnerName || "Sem parceiro"}
+                {reward.partnerName || t("Sem parceiro")}
               </p>
               <p style={{ margin: "10px 0", fontSize: 24, fontWeight: "bold", color: "#22c55e" }}>
                 {reward.points} pts
@@ -211,7 +187,7 @@ export default function UserPage() {
                 }}
                 disabled={reward.stock === 0}
               >
-                {reward.stock > 0 ? "Redimir" : "Sem stock"}
+                {reward.stock > 0 ? t("Redimir") : t("Sem stock")}
               </button>
             </div>
           ))}
@@ -220,21 +196,21 @@ export default function UserPage() {
 
       {/* Missões */}
       <div style={cardStyle}>
-        <h2 style={{ margin: "0 0 20px 0" }}>Missões Ativas</h2>
+        <h2 style={{ margin: "0 0 20px 0" }}>{t("Missões Ativas")}</h2>
         <div style={{ textAlign: "center", padding: 20, backgroundColor: "#f9fafb", borderRadius: 8 }}>
-          <p style={{ color: "#666" }}>Nenhuma missão ativa no momento</p>
+          <p style={{ color: "#666" }}>{t("Nenhuma missão ativa no momento")}</p>
           <button 
             style={buttonStyle}
             onClick={() => router.push("/user/missions")}
           >
-            Explorar Missões
+            {t("Explorar Missões")}
           </button>
         </div>
       </div>
 
       {/* Impacto */}
       <div style={cardStyle}>
-        <h2 style={{ margin: "0 0 20px 0" }}>Seu Impacto</h2>
+        <h2 style={{ margin: "0 0 20px 0" }}>{t("Seu Impacto")}</h2>
         <div
           style={{
             display: "grid",
@@ -243,19 +219,19 @@ export default function UserPage() {
           }}
         >
           <div style={{ padding: 15, backgroundColor: "#f0fdf4", borderRadius: 8 }}>
-            <p style={{ margin: 0, color: "#666", fontSize: 12 }}>CO2 Economizado</p>
+            <p style={{ margin: 0, color: "#666", fontSize: 12 }}>{t("CO2 Economizado")}</p>
             <p style={{ margin: "10px 0 0 0", fontSize: 24, fontWeight: "bold", color: "#22c55e" }}>
               0 kg
             </p>
           </div>
           <div style={{ padding: 15, backgroundColor: "#fef3c7", borderRadius: 8 }}>
-            <p style={{ margin: 0, color: "#666", fontSize: 12 }}>Árvores Plantadas</p>
+            <p style={{ margin: 0, color: "#666", fontSize: 12 }}>{t("Árvores Plantadas")}</p>
             <p style={{ margin: "10px 0 0 0", fontSize: 24, fontWeight: "bold", color: "#f59e0b" }}>
               0
             </p>
           </div>
           <div style={{ padding: 15, backgroundColor: "#dbeafe", borderRadius: 8 }}>
-            <p style={{ margin: 0, color: "#666", fontSize: 12 }}>Água Economizada</p>
+            <p style={{ margin: 0, color: "#666", fontSize: 12 }}>{t("Água Economizada")}</p>
             <p style={{ margin: "10px 0 0 0", fontSize: 24, fontWeight: "bold", color: "#3b82f6" }}>
               0 L
             </p>

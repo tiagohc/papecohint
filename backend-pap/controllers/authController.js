@@ -4,6 +4,10 @@ const crypto = require("crypto");
 const nodemailer = require("nodemailer");
 const db = require("../db");
 
+function isMissingPartnerUsersTable(err) {
+  return err?.code === "ER_NO_SUCH_TABLE" && String(err?.sqlMessage || "").includes("partner_users");
+}
+
 // LOGIN
 async function login(req, res) {
   const { email, password } = req.body;
@@ -21,15 +25,32 @@ async function login(req, res) {
     if (!match) return res.status(401).json({ error: "Credenciais inválidas" });
     if (user.status !== "active") return res.status(403).json({ error: "Utilizador inativo" });
 
+    let partnerLinks = [];
+    try {
+      const [rowsPartner] = await db.query(
+        "SELECT partner_id FROM partner_users WHERE user_id = ? LIMIT 1",
+        [user.id]
+      );
+      partnerLinks = rowsPartner;
+    } catch (partnerErr) {
+      if (!isMissingPartnerUsersTable(partnerErr)) {
+        throw partnerErr;
+      }
+    }
+
+    const isPartner = partnerLinks.length > 0;
+    const authRole = isPartner ? "partner" : user.role;
+    const partnerId = isPartner ? partnerLinks[0].partner_id : null;
+
     const token = jwt.sign(
-      { id: user.id, email: user.email, role: user.role },
+      { id: user.id, email: user.email, role: authRole, partner_id: partnerId },
       process.env.JWT_SECRET,
       { expiresIn: "1d" }
     );
 
     res.json({
       token,
-      user: { id: user.id, name: user.name, email: user.email, role: user.role },
+      user: { id: user.id, name: user.name, email: user.email, role: authRole, partner_id: partnerId },
     });
   } catch (err) {
     console.error(err);

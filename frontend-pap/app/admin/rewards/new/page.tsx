@@ -2,6 +2,15 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import {
+  adminErrorTextStyle,
+  adminFormCardStyle,
+  adminFormGridStyle,
+  adminInputStyle,
+  adminSelectStyle,
+  adminTextareaStyle,
+} from "../../components/formStyles";
+import { adminTopActionButtonStyle } from "../../components/tableStyles";
 
 type Partner = { id: number; name: string };
 
@@ -24,7 +33,7 @@ export default function NewRewardPage() {
   useEffect(() => {
     if (!token) return;
 
-    fetch("http://localhost:8000/admin/partners", {
+    fetch("/api/admin/partners", {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((res) => res.json())
@@ -44,7 +53,7 @@ export default function NewRewardPage() {
     setError("");
 
     try {
-      const res = await fetch("http://localhost:8000/admin/rewards", {
+      const res = await fetch("/api/admin/rewards", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -77,11 +86,11 @@ export default function NewRewardPage() {
     <div style={{ padding: 40, maxWidth: 600, margin: "0 auto" }}>
       <h1>Novo Reward</h1>
 
-      {error && <p style={{ color: "red" }}>{error}</p>}
+      {error && <p style={adminErrorTextStyle}>{error}</p>}
 
       <form
         onSubmit={handleSubmit}
-        style={{ display: "flex", flexDirection: "column", gap: 12 }}
+        style={{ ...adminFormCardStyle, ...adminFormGridStyle }}
       >
         <input
           type="text"
@@ -89,12 +98,14 @@ export default function NewRewardPage() {
           value={name}
           onChange={(e) => setName(e.target.value)}
           required
+          style={adminInputStyle}
         />
 
         <textarea
           placeholder="Descrição"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
+          style={adminTextareaStyle}
         />
 
         <input
@@ -103,6 +114,7 @@ export default function NewRewardPage() {
           value={points}
           onChange={(e) => setPoints(e.target.value)}
           required
+          style={adminInputStyle}
         />
 
         <input
@@ -111,6 +123,7 @@ export default function NewRewardPage() {
           value={stock}
           onChange={(e) => setStock(e.target.value)}
           required
+          style={adminInputStyle}
         />
 
         <input
@@ -118,6 +131,7 @@ export default function NewRewardPage() {
           placeholder="URL da imagem"
           value={imageUrl}
           onChange={(e) => setImageUrl(e.target.value)}
+          style={adminInputStyle}
         />
 
         <select
@@ -126,6 +140,7 @@ export default function NewRewardPage() {
             setPartnerId(e.target.value === "" ? "" : Number(e.target.value))
           }
           required
+          style={adminSelectStyle}
         >
           <option value="">Selecionar parceiro</option>
           {partners.map((p) => (
@@ -135,7 +150,7 @@ export default function NewRewardPage() {
           ))}
         </select>
 
-        <button type="submit" disabled={loading}>
+        <button type="submit" disabled={loading} style={adminTopActionButtonStyle}>
           {loading ? "Criando..." : "Criar Reward"}
         </button>
       </form>

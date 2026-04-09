@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { carbonSavedFromPoints } from "@/lib/progress";
+import { useLanguage } from "@/app/components/LanguageProvider";
 
 type ImpactMetric = {
   label: string;
@@ -14,6 +15,7 @@ type ImpactMetric = {
 
 export default function ImpactoAmbientalPage() {
   const router = useRouter();
+  const { t } = useLanguage();
   const [loading, setLoading] = useState(true);
   const [points, setPoints] = useState(0);
   const [metrics, setMetrics] = useState<ImpactMetric[]>([]);
@@ -25,31 +27,31 @@ export default function ImpactoAmbientalPage() {
 
     return [
       {
-        label: "CO₂ Economizado",
+        label: t("CO₂ Economizado"),
         value: Number(carbon.toFixed(1)),
         unit: "kg",
         color: "#22c55e",
         description: userPoints > 0
-          ? "Equivalente a uma viagem de 60 km de carro (média)."
-          : "Sem economia registrada ainda. Complete missões para começar a reduzir CO₂.",
+          ? t("Equivalente a uma viagem de 60 km de carro (média).")
+          : t("Sem economia registrada ainda. Complete missões para começar a reduzir CO₂."),
       },
       {
-        label: "Água Economizada",
+        label: t("Água Economizada"),
         value: Number(water.toFixed(0)),
         unit: "L",
         color: "#3b82f6",
         description: userPoints > 0
-          ? "Equivalente a 3 banhos rápidos."
-          : "Sem economia registrada ainda. Complete missões para começar a economizar água.",
+          ? t("Equivalente a 3 banhos rápidos.")
+          : t("Sem economia registrada ainda. Complete missões para começar a economizar água."),
       },
       {
-        label: "Energia Poupa",
+        label: t("Energia Poupada"),
         value: Number(energy.toFixed(1)),
         unit: "kWh",
         color: "#f59e0b",
         description: userPoints > 0
-          ? "Suficiente para iluminar uma casa por 2 horas."
-          : "Sem economia registrada ainda. Complete missões para começar a poupar energia.",
+          ? t("Suficiente para iluminar uma casa por 2 horas.")
+          : t("Sem economia registrada ainda. Complete missões para começar a poupar energia."),
       },
     ];
   };
@@ -69,7 +71,7 @@ export default function ImpactoAmbientalPage() {
     return () => clearInterval(interval);
   }, []);
 
-  if (loading) return <p>Carregando impacto ambiental...</p>;
+  if (loading) return <p>{t("Carregando impacto ambiental...")}</p>;
 
   const cardStyle: React.CSSProperties = {
     padding: 20,
@@ -82,10 +84,9 @@ export default function ImpactoAmbientalPage() {
   return (
     <div style={{ padding: 40, maxWidth: 1000, margin: "0 auto" }}>
       <div style={cardStyle}>
-        <h1 style={{ margin: 0, marginBottom: 10 }}>Impacto Ambiental</h1>
+        <h1 style={{ margin: 0, marginBottom: 10 }}>{t("Impacto Ambiental")}</h1>
         <p style={{ margin: 0, color: "#666" }}>
-          Aqui você pode acompanhar como as suas ações impactam positivamente o planeta.
-          Continue completando missões para melhorar seus números!
+          {t("Aqui você pode acompanhar como as suas ações impactam positivamente o planeta. Continue completando missões para melhorar seus números!")}
         </p>
       </div>
 
@@ -111,12 +112,12 @@ export default function ImpactoAmbientalPage() {
       </div>
 
       <div style={cardStyle}>
-        <h2 style={{ margin: "0 0 15px 0" }}>Como melhorar seu impacto</h2>
+        <h2 style={{ margin: "0 0 15px 0" }}>{t("Como melhorar seu impacto")}</h2>
         <ul style={{ paddingLeft: 20, margin: 0, color: "#444" }}>
-          <li>Complete missões que geram pontos e reduzem a pegada de carbono.</li>
-          <li>Opte por transporte sustentável sempre que possível.</li>
-          <li>Consuma menos água: prefira banhos mais rápidos e conserte vazamentos.</li>
-          <li>Desligue aparelhos quando não estiver usando para economizar energia.</li>
+          <li>{t("Complete missões que geram pontos e reduzem a pegada de carbono.")}</li>
+          <li>{t("Opte por transporte sustentável sempre que possível.")}</li>
+          <li>{t("Consuma menos água: prefira banhos mais rápidos e conserte vazamentos.")}</li>
+          <li>{t("Desligue aparelhos quando não estiver usando para economizar energia.")}</li>
         </ul>
         <button
           style={{
@@ -131,7 +132,7 @@ export default function ImpactoAmbientalPage() {
           }}
           onClick={() => router.push("/user/missions")}
         >
-          Ir para Missões
+          {t("Ir para Missões")}
         </button>
       </div>
     </div>

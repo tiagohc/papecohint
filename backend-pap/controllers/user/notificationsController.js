@@ -1,4 +1,4 @@
-const { getUserNotifications: getNotificationsFromDB, getUserNotificationById, markNotificationAsRead, markAllNotificationsAsRead, getUnreadCount } = require("../../models/user/notificationsModel");
+const { getUserNotifications: getNotificationsFromDB, getUserNotificationById, markNotificationAsRead, markAllNotificationsAsRead, getUnreadCount, registerFcmToken, unregisterFcmToken } = require("../../models/user/notificationsModel");
 
 // LISTAR NOTIFICAÇÕES DO USUÁRIO
 async function getUserNotifications(req, res) {
@@ -61,9 +61,41 @@ async function markAllAsRead(req, res) {
   }
 }
 
+// REGISTAR FCM TOKEN
+async function registerToken(req, res) {
+  try {
+    const userId = req.user.id;
+    const { token } = req.body;
+    if (!token) return res.status(400).json({ error: "Token em falta" });
+
+    await registerFcmToken(userId, token);
+    res.json({ message: "Token registado com sucesso" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Erro ao registar token" });
+  }
+}
+
+// REMOVER FCM TOKEN
+async function unregisterToken(req, res) {
+  try {
+    const userId = req.user.id;
+    const { token } = req.body;
+    if (!token) return res.status(400).json({ error: "Token em falta" });
+
+    await unregisterFcmToken(userId, token);
+    res.json({ message: "Token removido com sucesso" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Erro ao remover token" });
+  }
+}
+
 module.exports = {
   getUserNotifications,
   getUserNotification,
   markAsRead,
   markAllAsRead,
+  registerToken,
+  unregisterToken,
 };

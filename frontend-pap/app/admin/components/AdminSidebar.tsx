@@ -3,24 +3,29 @@
 import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useLanguage } from "@/app/components/LanguageProvider";
 
 export default function AdminSidebar() {
   const pathname = usePathname();
+  const { t } = useLanguage();
   const menuItems = [
-    { name: "Utilizadores", href: "/admin/users" },
-    { name: "Parceiros", href: "/admin/partners" },
-    { name: "Produtos", href: "/admin/rewards" },
-    { name: "Missões", href: "/admin/missions" },
-    { name: "Relatórios", href: "/admin/reports" },
+    { name: t("Utilizadores"), href: "/admin/users" },
+    { name: t("Parceiros"), href: "/admin/partners" },
+    { name: t("Produtos"), href: "/admin/rewards" },
+    { name: t("Missões"), href: "/admin/missions" },
+    { name: t("Notificações"), href: "/admin/notifications" },
+    { name: t("Relatórios"), href: "/admin/reports" },
   ];
 
   return (
-    <aside className="sidebar">
-      <div className="logo">
+    <aside className="sidebar" style={{ display: "flex", flexDirection: "column", gap: 24, padding: "24px 18px" }}>
+      <div className="logo" style={{ fontSize: 28, fontWeight: 700, marginBottom: 4 }}>
         EcoHint
       </div>
-      <div className="section">
-        <p className="section-title">Ferramentas Admin</p>
+      <div className="section" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        <p className="section-title" style={{ margin: 0, marginBottom: 6, fontSize: 13, opacity: 0.9 }}>
+          {t("Ferramentas Admin")}
+        </p>
         {menuItems.map((item) => (
           <Link
             key={item.name}

@@ -2,8 +2,10 @@
 
 import { useSearchParams, useRouter } from "next/navigation";
 import { useState, Suspense } from "react";
+import { useLanguage } from "@/app/components/LanguageProvider";
 
 function ResetPasswordForm() {
+  const { t } = useLanguage();
   const searchParams = useSearchParams();
   const router = useRouter();
 
@@ -20,22 +22,22 @@ function ResetPasswordForm() {
     setSuccess("");
 
     if (!token) {
-      setError("Token inválido ou inexistente");
+      setError(t("Token inválido ou inexistente"));
       return;
     }
 
     if (password.length < 6) {
-      setError("A password deve ter pelo menos 6 caracteres");
+      setError(t("A password deve ter pelo menos 6 caracteres"));
       return;
     }
 
     if (password !== confirm) {
-      setError("As passwords não coincidem");
+      setError(t("As passwords não coincidem"));
       return;
     }
 
     try {
-      const res = await fetch("http://localhost:8000/reset-password", {
+      const res = await fetch("/api/reset-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ token, password }),
@@ -44,24 +46,24 @@ function ResetPasswordForm() {
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error || "Erro ao redefinir password");
+        setError(data.error || t("Erro ao redefinir password"));
         return;
       }
 
-      setSuccess("Password alterada com sucesso. A redirecionar para o login...");
+      setSuccess(t("Password alterada com sucesso. A redirecionar para o login..."));
 
       setTimeout(() => {
         router.push("/"); // ✅ LOGIN ESTÁ NA ROOT
       }, 2000);
     } catch (err) {
       console.error(err);
-      setError("Erro de ligação ao servidor");
+      setError(t("Erro de ligação ao servidor"));
     }
   }
 
   return (
     <div style={{ maxWidth: 400, margin: "100px auto" }}>
-      <h2>Redefinir Password</h2>
+      <h2>{t("Redefinir Password")}</h2>
 
       {error && <p style={{ color: "red" }}>{error}</p>}
       {success && <p style={{ color: "green" }}>{success}</p>}
@@ -69,7 +71,7 @@ function ResetPasswordForm() {
       <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
         <input
           type="password"
-          placeholder="Nova password"
+          placeholder={t("Nova password")}
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
@@ -77,13 +79,13 @@ function ResetPasswordForm() {
 
         <input
           type="password"
-          placeholder="Confirmar password"
+          placeholder={t("Confirmar password")}
           value={confirm}
           onChange={(e) => setConfirm(e.target.value)}
           required
         />
 
-        <button type="submit">Alterar password</button>
+        <button type="submit">{t("Alterar password")}</button>
       </form>
     </div>
   );

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useLanguage } from "@/app/components/LanguageProvider";
 
 type Product = {
   id: number;
@@ -14,6 +15,7 @@ type Product = {
 type SelectionState = Record<number, number>;
 
 export default function LojaDePontosPage() {
+  const { t } = useLanguage();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [selection, setSelection] = useState<SelectionState>({});
@@ -123,18 +125,17 @@ export default function LojaDePontosPage() {
     marginBottom: 20,
   };
 
-  if (loading) return <p>Carregando loja...</p>;
+  if (loading) return <p>{t("Carregando loja...")}</p>;
 
   return (
     <div style={{ padding: 40, maxWidth: 1100, margin: "0 auto" }}>
       <div style={cardStyle}>
-        <h1 style={{ margin: 0, marginBottom: 10 }}>🏬 Loja de Pontos</h1>
+        <h1 style={{ margin: 0, marginBottom: 10 }}>🏬 {t("Loja de Pontos")}</h1>
         <p style={{ margin: 0, color: "#666" }}>
-          Escolha produtos disponíveis e selecione a quantidade (até 10 unidades). Os pontos necessários
-          serão calculados automaticamente.
+          {t("Escolha produtos disponíveis e selecione a quantidade (até 10 unidades). Os pontos necessários serão calculados automaticamente.")}
         </p>
         <p style={{ margin: "10px 0 0 0", color: "#1f2937", fontWeight: 600 }}>
-          Saldo atual: <span style={{ color: "#16a34a" }}>{userPoints.toLocaleString()} pts</span>
+          {t("Saldo atual:")} <span style={{ color: "#16a34a" }}>{userPoints.toLocaleString()} pts</span>
         </p>
       </div>
 
@@ -203,7 +204,7 @@ export default function LojaDePontosPage() {
                     fontWeight: 600,
                   }}
                 >
-                  {disabled ? "Neste momento não está disponível" : `Stock: ${product.stock}`}
+                  {disabled ? t("Neste momento não está disponível") : `Stock: ${product.stock}`}
                 </div>
               </div>
 
@@ -211,7 +212,7 @@ export default function LojaDePontosPage() {
 
               <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
                 <div>
-                  <label style={{ fontSize: 12, color: "#555" }}>Quantidade</label>
+                  <label style={{ fontSize: 12, color: "#555" }}>{t("Quantidade")}</label>
                           <select
                     value={qty}
                     onChange={(event) => handleSelectQuantity(product.id, Number(event.target.value))}
@@ -233,7 +234,7 @@ export default function LojaDePontosPage() {
                 </div>
 
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 12, color: "#555" }}>Total de pontos</div>
+                  <div style={{ fontSize: 12, color: "#555" }}>{t("Total de pontos")}</div>
                   <div style={{ fontSize: 18, fontWeight: 700, color: "#16a34a" }}>
                     {totalPoints} pts
                   </div>
@@ -253,7 +254,7 @@ export default function LojaDePontosPage() {
                     flexShrink: 0,
                   }}
                 >
-                  Comprar
+                  {t("Comprar")}
                 </button>
               </div>
             </div>

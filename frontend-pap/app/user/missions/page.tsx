@@ -2,19 +2,23 @@
 
 import { useEffect, useState, useRef } from "react";
 import { getLevelFromPoints } from "@/lib/progress";
+import { useLanguage } from "@/app/components/LanguageProvider";
 
 type Mission = {
   id: number;
   title: string;
   description: string;
   type: "daily" | "monthly";
+  access?: "free" | "premium";
   points: number;
+  created_at?: string;
+  expires_at?: string;
   image_url?: string;
   isCompleted: number;
-  verified?: number;
 };
 
 export default function MissionsPage() {
+  const { t } = useLanguage();
   const [missions, setMissions] = useState<Mission[]>([]);
   const [activeTab, setActiveTab] = useState<"daily" | "monthly">("daily");
   const [loading, setLoading] = useState(true);
@@ -22,8 +26,14 @@ export default function MissionsPage() {
   const [selectedMissionId, setSelectedMissionId] = useState<number | null>(null);
   const [userPoints, setUserPoints] = useState(0);
   const [missionsCompleted, setMissionsCompleted] = useState(0);
+  const [now, setNow] = useState(() => Date.now());
   const fileInputRef = useRef<HTMLInputElement>(null);
   const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+
+  useEffect(() => {
+    const interval = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     const storedPoints = typeof window !== "undefined" ? localStorage.getItem("ecohint-points") : null;
@@ -33,14 +43,14 @@ export default function MissionsPage() {
 
     if (!token) return;
 
-    fetch("http://localhost:8000/admin/missions", {
+    fetch("/api/user/missions", {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then(r => r.json())
       .then(data => {
         const missionsData = Array.isArray(data) ? data : [];
         setMissions(missionsData);
-        const completed = missionsData.filter((m) => m.verified === 1).length;
+        const completed = missionsData.filter((m) => m.isCompleted === 1).length;
         setMissionsCompleted(completed);
         if (typeof window !== "undefined") {
           localStorage.setItem("ecohint-missions-completed", String(completed));
@@ -68,7 +78,7 @@ export default function MissionsPage() {
 
       try {
         const res = await fetch(
-          `http://localhost:8000/admin/missions/${selectedMissionId}/complete`,
+          `/api/user/missions/${selectedMissionId}/complete`,
           {
             method: "POST",
             headers: {
@@ -80,19 +90,38 @@ export default function MissionsPage() {
         );
 
         if (res.ok) {
-          alert("Missão submetida para verificação! Aguarde aprovação do admin.");
+          const payload = await res.json();
+          const gainedPoints = Number(payload?.points_awarded || 0);
+
+          if (gainedPoints > 0) {
+            setUserPoints((prev) => {
+              const next = prev + gainedPoints;
+              if (typeof window !== "undefined") {
+                localStorage.setItem("ecohint-points", String(next));
+              }
+              return next;
+            });
+          }
+
+          alert(`${t("Missão completada!")} (+${gainedPoints} ${t("pontos")})`);
           // Refresh missions
-          const updatedRes = await fetch("http://localhost:8000/admin/missions", {
+          const updatedRes = await fetch("/api/user/missions", {
             headers: { Authorization: `Bearer ${token}` },
           });
           const updatedData = await updatedRes.json();
-          setMissions(Array.isArray(updatedData) ? updatedData : []);
+          const missionsData = Array.isArray(updatedData) ? updatedData : [];
+          setMissions(missionsData);
+          const completed = missionsData.filter((m: Mission) => m.isCompleted === 1).length;
+          setMissionsCompleted(completed);
+          if (typeof window !== "undefined") {
+            localStorage.setItem("ecohint-missions-completed", String(completed));
+          }
         } else {
-          alert("Erro ao submeter missão");
+          alert(t("Erro ao submeter missão"));
         }
       } catch (err) {
         console.error(err);
-        alert("Erro ao submeter missão");
+        alert(t("Erro ao submeter missão"));
       } finally {
         setSubmitting(null);
         setSelectedMissionId(null);
@@ -101,51 +130,7 @@ export default function MissionsPage() {
     reader.readAsDataURL(file);
   };
 
-  const handleRedeem = async (missionId: number) => {
-    if (!token) return;
-
-    try {
-      const res = await fetch(
-        `http://localhost:8000/admin/missions/${missionId}/redeem`,
-        {
-          method: "POST",
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-
-      if (res.ok) {
-        const data = await res.json();
-        const gainedPoints = data?.points ?? 0;
-
-        setUserPoints((prev) => {
-          const next = prev + gainedPoints;
-          if (typeof window !== "undefined") {
-            localStorage.setItem("ecohint-points", String(next));
-          }
-          return next;
-        });
-
-        alert(`Pontos resgatados com sucesso! (+${gainedPoints} points)`);
-        const updatedRes = await fetch("http://localhost:8000/admin/missions", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const updatedData = await updatedRes.json();
-        const missionsData = Array.isArray(updatedData) ? updatedData : [];
-        setMissions(missionsData);
-        const completed = missionsData.filter((m) => m.verified === 1).length;
-        setMissionsCompleted(completed);
-        if (typeof window !== "undefined") {
-          localStorage.setItem("ecohint-missions-completed", String(completed));
-        }
-      } else {
-        alert("Erro ao resgatar pontos");
-      }
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  if (loading) return <p>Carregando missões...</p>;
+  if (loading) return <p>{t("Carregando missões...")}</p>;
 
   const filteredMissions = missions.filter(m => m.type === activeTab);
 
@@ -180,55 +165,86 @@ export default function MissionsPage() {
     marginRight: 8,
   });
 
-  const getDifficultyBadge = (points: number) => {
-    if (points <= 50) {
+  const getAccessBadge = (access?: Mission["access"]) => {
+    if (access === "premium") {
       return {
-        label: "Fácil",
-        color: "#16a34a",
-        bgColor: "#dcfce7",
-      };
-    }
-    if (points <= 150) {
-      return {
-        label: "Médio",
-        color: "#f59e0b",
-        bgColor: "#fef9c3",
+        label: t("Premium"),
+        color: "#7c3aed",
+        bgColor: "#ede9fe",
       };
     }
     return {
-      label: "Difícil",
-      color: "#dc2626",
-      bgColor: "#fee2e2",
+      label: t("Gratuito"),
+      color: "#15803d",
+      bgColor: "#dcfce7",
     };
   };
 
   const getStatusBadge = (mission: Mission) => {
     if (!mission.isCompleted) {
       return {
-        text: "Não Completada",
+        text: t("Não Completada"),
         color: "#ef4444",
         bgColor: "#fee2e2",
       };
     }
-    if (mission.verified) {
-      return {
-        text: "Verificada",
-        color: "#22c55e",
-        bgColor: "#f0fdf4",
-      };
-    }
     return {
-      text: "Pendente Verificação",
-      color: "#f59e0b",
-      bgColor: "#fef3c7",
+      text: t("Concluída"),
+      color: "#2563eb",
+      bgColor: "#dbeafe",
     };
   };
 
+  const getRemainingSeconds = (mission: Mission) => {
+    let expiry: Date | null = null;
+
+    if (mission.expires_at) {
+      const parsed = new Date(mission.expires_at);
+      if (!Number.isNaN(parsed.getTime())) {
+        expiry = parsed;
+      }
+    }
+
+    if (!expiry && mission.created_at) {
+      const createdAt = new Date(mission.created_at);
+      if (!Number.isNaN(createdAt.getTime())) {
+        const fallback = new Date(createdAt);
+        if (mission.type === "daily") fallback.setDate(fallback.getDate() + 1);
+        else if (mission.type === "monthly") fallback.setMonth(fallback.getMonth() + 1);
+        expiry = fallback;
+      }
+    }
+
+    if (!expiry) return null;
+
+    return Math.max(0, Math.floor((expiry.getTime() - now) / 1000));
+  };
+
+  const formatRemaining = (seconds: number | null) => {
+    if (seconds === null) return "-";
+    if (seconds <= 0) return t("Expirada");
+
+    const days = Math.floor(seconds / 86400);
+    const hours = Math.floor((seconds % 86400) / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+
+    if (days > 0) return `${days}d ${hours}h ${minutes}m`;
+    if (hours > 0) return `${hours}h ${minutes}m ${secs}s`;
+    if (minutes > 0) return `${minutes}m ${secs}s`;
+    return `${secs}s`;
+  };
+
+  const availableMissions = filteredMissions.filter((mission) => {
+    const remaining = getRemainingSeconds(mission);
+    return remaining === null || remaining > 0;
+  });
+
   return (
     <div style={{ padding: 40, maxWidth: 1000, margin: "0 auto" }}>
-      <h1>Missões</h1>
+      <h1>{t("Missões")}</h1>
       <p style={{ color: "#666", marginBottom: 30 }}>
-        Complete missões e ganhe pontos EcoHint!
+        {t("Complete missões e ganhe pontos EcoHint!")}
       </p>
 
       {/* Tabs */}
@@ -237,27 +253,29 @@ export default function MissionsPage() {
           style={tabButtonStyle(activeTab === "daily")}
           onClick={() => setActiveTab("daily")}
         >
-          Missões Diárias
+          {t("Missões Diárias")}
         </button>
         <button
           style={tabButtonStyle(activeTab === "monthly")}
           onClick={() => setActiveTab("monthly")}
         >
-          Missões Mensais
+          {t("Missões Mensais")}
         </button>
       </div>
 
       {/* Missions List */}
       <div>
-        {filteredMissions.length === 0 ? (
+        {availableMissions.length === 0 ? (
           <div style={missionCardStyle}>
             <p style={{ textAlign: "center", color: "#999" }}>
-              Nenhuma missão disponível neste momento
+              {t("Nenhuma missão disponível neste momento")}
             </p>
           </div>
         ) : (
-          filteredMissions.map(mission => {
+          availableMissions.map(mission => {
             const status = getStatusBadge(mission);
+            const access = getAccessBadge(mission.access);
+            const remaining = getRemainingSeconds(mission);
             return (
               <div key={mission.id} style={missionCardStyle}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start" }}>
@@ -279,11 +297,11 @@ export default function MissionsPage() {
                             borderRadius: 20,
                             fontSize: 12,
                             fontWeight: "bold",
-                            backgroundColor: getDifficultyBadge(mission.points).bgColor,
-                            color: getDifficultyBadge(mission.points).color,
+                            backgroundColor: access.bgColor,
+                            color: access.color,
                           }}
                         >
-                          {getDifficultyBadge(mission.points).label}
+                          {access.label}
                         </div>
                       </div>
                       <div
@@ -298,6 +316,18 @@ export default function MissionsPage() {
                       >
                         {status.text}
                       </div>
+                      <div
+                        style={{
+                          padding: "5px 12px",
+                          backgroundColor: "#eef2ff",
+                          color: "#3730a3",
+                          borderRadius: 20,
+                          fontSize: 12,
+                          fontWeight: "bold",
+                        }}
+                      >
+                        {t("Tempo restante")}: {formatRemaining(remaining)}
+                      </div>
                     </div>
                   </div>
 
@@ -309,18 +339,11 @@ export default function MissionsPage() {
                         onClick={() => handleFileSelect(mission.id)}
                         disabled={submitting === mission.id}
                       >
-                        {submitting === mission.id ? "Enviando..." : "Submeter Foto"}
-                      </button>
-                    ) : mission.verified ? (
-                      <button
-                        style={actionButtonStyle()}
-                        onClick={() => handleRedeem(mission.id)}
-                      >
-                        Resgatar Pontos
+                        {submitting === mission.id ? t("Enviando...") : t("Submeter Foto")}
                       </button>
                     ) : (
                       <button style={actionButtonStyle(true)} disabled>
-                        ⏳ Aguardando Verificação
+                        {t("Concluída")}
                       </button>
                     )}
                   </div>
@@ -365,14 +388,13 @@ export default function MissionsPage() {
         }}
       >
         <h3 style={{ margin: "0 0 10px 0", color: "#15803d" }}>
-          Como Funciona
+          {t("Como Funciona")}
         </h3>
         <ol style={{ margin: 0, paddingLeft: 20, color: "#666" }}>
-          <li>Escolha uma missão e clique em "Submeter Foto"</li>
-          <li>Tire uma foto como comprovação da missão completada</li>
-          <li>Aguarde a verificação do administrador</li>
-          <li>Quando aprovada, resgate seus pontos EcoHint</li>
-          <li>Acumule pontos e troque por rewards!</li>
+          <li>{t("Escolha uma missão e clique em Submeter Foto")}</li>
+          <li>{t("Tire uma foto como comprovação da missão completada")}</li>
+          <li>{t("Os pontos são atribuídos automaticamente após o envio")}</li>
+          <li>{t("Acumule pontos e troque por rewards!")}</li>
         </ol>
       </div>
     </div>

@@ -1,5 +1,6 @@
 import "./globals.css";
 import { LanguageProvider } from "./components/LanguageProvider";
+import ThemeProvider from "./components/ThemeProvider";
 
 export const metadata = {
   manifest: "/manifest.json",
@@ -12,11 +13,13 @@ export default function RootLayout({
 }) 
 {
   return (
-    <html lang="pt">
+    <html lang="pt" suppressHydrationWarning>
       <body>
-        <LanguageProvider>
-          {children}
-        </LanguageProvider>
+        <ThemeProvider>
+          <LanguageProvider>
+            {children}
+          </LanguageProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

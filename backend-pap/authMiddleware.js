@@ -24,4 +24,11 @@ function adminOnly(req, res, next) {
   next();
 }
 
-module.exports = { auth, adminOnly };
+function partnerOnly(req, res, next) {
+  if (!req.user || req.user.role !== "partner" || !req.user.partner_id) {
+    return res.status(403).json({ error: "Acesso negado" });
+  }
+  next();
+}
+
+module.exports = { auth, adminOnly, partnerOnly };

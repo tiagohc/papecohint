@@ -5,7 +5,10 @@
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
-    "dev": "nodemon index.js"
+    "dev": "nodemon index.js",
+    "db:missions-setup": "node create_missions_support_tables.js",
+    "db:partners-setup": "node create_partner_users_table.js",
+    "db:premium-setup": "node create_premium_tables.js"
   },
   "keywords": [],
   "author": "",
@@ -16,9 +19,11 @@
     "cors": "^2.8.6",
     "dotenv": "^17.2.3",
     "express": "^5.2.1",
+    "firebase-admin": "^13.7.0",
     "jsonwebtoken": "^9.0.3",
     "mysql2": "^3.16.0",
-    "nodemailer": "^7.0.13"
+    "nodemailer": "^7.0.13",
+    "stripe": "^18.1.1"
   },
   "devDependencies": {
     "nodemon": "^3.1.11"

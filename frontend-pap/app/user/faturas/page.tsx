@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useLanguage } from "@/app/components/LanguageProvider";
 
 type UploadedInvoice = {
   id: string;
@@ -11,6 +12,7 @@ type UploadedInvoice = {
 };
 
 export default function FaturasPage() {
+  const { t } = useLanguage();
   const [uploaded, setUploaded] = useState<UploadedInvoice[]>([]);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -77,14 +79,14 @@ export default function FaturasPage() {
   return (
     <div style={{ padding: 40, maxWidth: 1000, margin: "0 auto" }}>
       <div style={cardStyle}>
-        <h1 style={{ margin: 0, marginBottom: 10 }}>Faturas</h1>
+        <h1 style={{ margin: 0, marginBottom: 10 }}>{t("Faturas")}</h1>
         <p style={{ margin: 0, color: "#666" }}>
-          Faça upload da sua fatura para que a inteligência artificial possa analisar os dados e gerar insights.
+          {t("Faça upload da sua fatura para que a inteligência artificial possa analisar os dados e gerar insights.")}
         </p>
       </div>
 
       <div style={cardStyle}>
-        <h2 style={{ margin: "0 0 15px 0" }}>Enviar documento</h2>
+        <h2 style={{ margin: "0 0 15px 0" }}>{t("Enviar documento")}</h2>
 
         <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
           <label
@@ -100,7 +102,7 @@ export default function FaturasPage() {
               fontWeight: 500,
             }}
           >
-            <span>Escolher arquivo</span>
+            <span>{t("Escolher arquivo")}</span>
             <input
               type="file"
               accept=".pdf,.jpg,.jpeg,.png"
@@ -123,26 +125,26 @@ export default function FaturasPage() {
             disabled={!selectedFile || isUploading}
             onClick={handleUpload}
           >
-            {isUploading ? "Enviando..." : "Enviar"}
+            {isUploading ? t("Enviando...") : t("Enviar")}
           </button>
         </div>
 
         {selectedFile ? (
           <p style={{ marginTop: 14, color: "#333" }}>
-            Arquivo selecionado: <strong>{selectedFile.name}</strong> ({formatSize(selectedFile.size)})
+            {t("Arquivo selecionado:")} <strong>{selectedFile.name}</strong> ({formatSize(selectedFile.size)})
           </p>
         ) : (
           <p style={{ marginTop: 14, color: "#666" }}>
-            Selecione um arquivo PDF, imagem JPG/PNG ou similar para enviar.
+            {t("Selecione um arquivo PDF, imagem JPG/PNG ou similar para enviar.")}
           </p>
         )}
       </div>
 
       <div style={cardStyle}>
-        <h2 style={{ margin: "0 0 15px 0" }}>Faturas enviadas</h2>
+        <h2 style={{ margin: "0 0 15px 0" }}>{t("Faturas enviadas")}</h2>
 
         {uploaded.length === 0 ? (
-          <p style={{ color: "#666" }}>Nenhuma fatura enviada ainda. Faça o upload para começar.</p>
+          <p style={{ color: "#666" }}>{t("Nenhuma fatura enviada ainda. Faça o upload para começar.")}</p>
         ) : (
           <div style={{ display: "grid", gap: 12 }}>
             {uploaded.map((invoice) => (
@@ -159,7 +161,7 @@ export default function FaturasPage() {
                   <div>
                     <div style={{ fontWeight: 600 }}>{invoice.name}</div>
                     <div style={{ fontSize: 12, color: "#555" }}>
-                      Enviado em {new Date(invoice.uploadedAt).toLocaleString()}
+                      {t("Enviado em")} {new Date(invoice.uploadedAt).toLocaleString()}
                     </div>
                   </div>
                   <div style={{ fontSize: 12, color: "#444" }}>{formatSize(invoice.size)}</div>
@@ -170,7 +172,7 @@ export default function FaturasPage() {
         )}
 
         <p style={{ marginTop: 18, color: "#666" }}>
-          Em breve, a inteligência artificial analisará os dados da fatura e exibirá resultados automáticos.
+          {t("Em breve, a inteligência artificial analisará os dados da fatura e exibirá resultados automáticos.")}
         </p>
       </div>
     </div>

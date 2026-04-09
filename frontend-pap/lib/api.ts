@@ -5,7 +5,7 @@ export async function getMe() {
       throw new Error("Sem token");
     }
   
-    const res = await fetch("http://localhost:8000/me", {
+    const res = await fetch("/api/me", {
       headers: {
         Authorization: `Bearer ${token}`,
       },

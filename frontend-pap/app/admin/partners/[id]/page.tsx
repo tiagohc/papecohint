@@ -1,6 +1,22 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
+import {
+  adminFormCardStyle,
+  adminFormRowStyle,
+  adminInputStyle,
+} from "../../components/formStyles";
+import {
+  adminActionDangerButtonStyle,
+  adminTableInputStyle,
+  adminTopActionButtonStyle,
+  adminTableCellStyle,
+  adminTableContainerStyle,
+  adminTableHeaderCellStyle,
+  adminTableHeadRowStyle,
+  adminTableRowStyle,
+  adminTableStyle,
+} from "../../components/tableStyles";
 
 type Product = {
   id: number;
@@ -29,7 +45,7 @@ export default function PartnerProductsPage() {
 
   const fetchProducts = () => {
     if (!token) return;
-    fetch(`http://localhost:8000/admin/partners/${partnerId}/products`, {
+    fetch(`/api/admin/partners/${partnerId}/products`, {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then(res => res.json())
@@ -42,7 +58,7 @@ export default function PartnerProductsPage() {
   const handleDelete = async (id: number) => {
     if (!token) return;
     if (!confirm("Apagar produto?")) return;
-    await fetch(`http://localhost:8000/admin/partners/${partnerId}/products/${id}`, {
+    await fetch(`/api/admin/partners/${partnerId}/products/${id}`, {
       method: "DELETE",
       headers: { Authorization: `Bearer ${token}` },
     });
@@ -54,7 +70,7 @@ export default function PartnerProductsPage() {
     if (!newName || !newPoints || !newStock) return;
 
     setAdding(true);
-    await fetch("http://localhost:8000/admin/rewards", {
+    await fetch("/api/admin/rewards", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify({
@@ -77,7 +93,7 @@ export default function PartnerProductsPage() {
 
   const handleStockChange = async (id: number, stock: number) => {
     if (!token) return;
-    await fetch(`http://localhost:8000/admin/partners/${partnerId}/products/${id}`, {
+    await fetch(`/api/admin/partners/${partnerId}/products/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify({ stock }),
@@ -90,19 +106,21 @@ export default function PartnerProductsPage() {
   return (
     <div style={{ padding: 40 }}>
       <h1>Produtos do Parceiro {partnerId}</h1>
-      <form onSubmit={handleAddProduct} style={{ marginBottom: 20 }}>
+      <form onSubmit={handleAddProduct} style={{ ...adminFormCardStyle, ...adminFormRowStyle, marginBottom: 20 }}>
         <input
           type="text"
           placeholder="Nome do Produto"
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
           required
+          style={adminInputStyle}
         />
         <input
           type="text"
           placeholder="Descrição"
           value={newDescription}
           onChange={(e) => setNewDescription(e.target.value)}
+          style={adminInputStyle}
         />
         <input
           type="number"
@@ -110,6 +128,7 @@ export default function PartnerProductsPage() {
           value={newPoints}
           onChange={(e) => setNewPoints(e.target.value)}
           required
+          style={adminInputStyle}
         />
         <input
           type="number"
@@ -117,48 +136,52 @@ export default function PartnerProductsPage() {
           value={newStock}
           onChange={(e) => setNewStock(e.target.value)}
           required
+          style={adminInputStyle}
         />
         <input
           type="text"
           placeholder="URL da Imagem"
           value={newImageUrl}
           onChange={(e) => setNewImageUrl(e.target.value)}
+          style={adminInputStyle}
         />
-        <button type="submit" disabled={adding}>
+        <button type="submit" disabled={adding} style={adminTopActionButtonStyle}>
           {adding ? "Adicionando..." : "Adicionar Produto"}
         </button>
       </form>
-      <table style={{ width: "100%", borderCollapse: "collapse" }}>
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Nome</th>
-            <th>Pontos</th>
-            <th>Stock</th>
-            <th>Ações</th>
-          </tr>
-        </thead>
-        <tbody>
-          {products.map(p => (
-            <tr key={p.id}>
-              <td>{p.id}</td>
-              <td>{p.name}</td>
-              <td>{p.points}</td>
-              <td>
+      <div style={adminTableContainerStyle}>
+        <table style={adminTableStyle}>
+          <thead>
+            <tr style={adminTableHeadRowStyle}>
+              <th style={adminTableHeaderCellStyle}>ID</th>
+              <th style={adminTableHeaderCellStyle}>Nome</th>
+              <th style={adminTableHeaderCellStyle}>Pontos</th>
+              <th style={adminTableHeaderCellStyle}>Stock</th>
+              <th style={adminTableHeaderCellStyle}>Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            {products.map((p, idx) => (
+              <tr key={p.id} style={adminTableRowStyle(idx)}>
+                <td style={adminTableCellStyle}>{p.id}</td>
+                <td style={adminTableCellStyle}>{p.name}</td>
+                <td style={adminTableCellStyle}>{p.points}</td>
+                <td style={adminTableCellStyle}>
                 <input
                   type="number"
                   value={p.stock}
                   onChange={(e) => handleStockChange(p.id, Number(e.target.value))}
-                  style={{ width: 60 }}
+                  style={adminTableInputStyle}
                 />
-              </td>
-              <td>
-                <button onClick={() => handleDelete(p.id)}>Apagar</button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+                </td>
+                <td style={adminTableCellStyle}>
+                  <button onClick={() => handleDelete(p.id)} style={adminActionDangerButtonStyle}>Apagar</button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

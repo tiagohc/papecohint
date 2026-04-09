@@ -1,4 +1,4 @@
-// app/admin/layout.tsx
+
 "use client";
 
 import React from "react";
@@ -13,7 +13,7 @@ export default function AdminLayout({
   return (
     <>
       <AdminSidebar />
-      <div style={{ marginLeft: 260, minHeight: "100vh", backgroundColor: "linear-gradient(135deg, #f0fdf4 0%, #f4f8f5 100%)" }}>
+      <div className="admin-content-wrapper" style={{ marginLeft: 260, minHeight: "100vh" }}>
         <AdminHeader />
         <main style={{ padding: 30 }}>
           {children}

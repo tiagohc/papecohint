@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { getLevelFromPoints, carbonSavedFromPoints } from "@/lib/progress";
+import { useLanguage } from "@/app/components/LanguageProvider";
 
 interface UserProfile {
   id: number;
@@ -13,6 +14,7 @@ interface UserProfile {
 }
 
 export default function PerfilPage() {
+  const { t } = useLanguage();
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [userPoints, setUserPoints] = useState(0);
   const [isEditing, setIsEditing] = useState(false);
@@ -136,7 +138,7 @@ export default function PerfilPage() {
     return (
       <div style={{ padding: 40, maxWidth: 800, margin: "0 auto" }}>
         <div style={cardStyle}>
-          <p>Carregando perfil...</p>
+          <p>{t("Carregando perfil...")}</p>
         </div>
       </div>
     );
@@ -166,7 +168,7 @@ export default function PerfilPage() {
               {userProfile.avatar ? (
                 <img
                   src={userProfile.avatar}
-                  alt="Foto de perfil"
+                  alt={t("Foto de perfil")}
                   style={{
                     width: "100%",
                     height: "100%",
@@ -196,7 +198,7 @@ export default function PerfilPage() {
                 cursor: "pointer",
                 fontSize: 16,
               }}
-              title="Alterar foto de perfil"
+              title={t("Alterar foto de perfil")}
             >
               📷
             </label>
@@ -224,7 +226,7 @@ export default function PerfilPage() {
                   fontWeight: "bold",
                 }}
               >
-                {userProfile.status === "active" ? "Ativo" : "Inativo"}
+                {userProfile.status === "active" ? t("Ativo") : t("Inativo")}
               </span>
               <span
                 style={{
@@ -236,7 +238,7 @@ export default function PerfilPage() {
                   fontWeight: "bold",
                 }}
               >
-                {userProfile.role === "admin" ? "Administrador" : "Usuário"}
+                {userProfile.role === "admin" ? t("Administrador") : t("Usuário")}
               </span>
             </div>
           </div>
@@ -253,7 +255,7 @@ export default function PerfilPage() {
               fontSize: 14,
             }}
           >
-            {isEditing ? "Cancelar" : "Editar Perfil"}
+            {isEditing ? t("Cancelar") : t("Editar Perfil")}
           </button>
         </div>
       </div>
@@ -261,11 +263,11 @@ export default function PerfilPage() {
       {/* Formulário de Edição */}
       {isEditing && (
         <div style={cardStyle}>
-          <h2 style={{ margin: "0 0 20px 0" }}>Editar Perfil</h2>
+          <h2 style={{ margin: "0 0 20px 0" }}>{t("Editar Perfil")}</h2>
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
             <div>
               <label style={{ display: "block", marginBottom: 4, fontWeight: "bold" }}>
-                Nome
+                {t("Nome")}
               </label>
               <input
                 type="text"
@@ -283,7 +285,7 @@ export default function PerfilPage() {
 
             <div>
               <label style={{ display: "block", marginBottom: 4, fontWeight: "bold" }}>
-                Email
+                {t("Email")}
               </label>
               <input
                 type="email"
@@ -313,7 +315,7 @@ export default function PerfilPage() {
                   fontWeight: "bold",
                 }}
               >
-                {isLoading ? "Salvando..." : "Salvar Alterações"}
+                {isLoading ? t("Salvando...") : t("Salvar Alterações")}
               </button>
             </div>
           </div>
@@ -326,27 +328,27 @@ export default function PerfilPage() {
           <div style={{ fontSize: 32, fontWeight: 700, color: "#22c55e", marginBottom: 8 }}>
             {userPoints.toLocaleString()}
           </div>
-          <div style={{ color: "#666", fontSize: 14 }}>Pontos Totais</div>
+          <div style={{ color: "#666", fontSize: 14 }}>{t("Pontos Totais")}</div>
         </div>
 
         <div style={statCardStyle}>
           <div style={{ fontSize: 32, fontWeight: 700, color: "#f59e0b", marginBottom: 8 }}>
             {userLevel.level}
           </div>
-          <div style={{ color: "#666", fontSize: 14 }}>Nível Atual</div>
+          <div style={{ color: "#666", fontSize: 14 }}>{t("Nível Atual")}</div>
         </div>
 
         <div style={statCardStyle}>
           <div style={{ fontSize: 32, fontWeight: 700, color: "#3b82f6", marginBottom: 8 }}>
             {Math.round(userCarbon)}
           </div>
-          <div style={{ color: "#666", fontSize: 14 }}>kg CO₂ Economizados</div>
+          <div style={{ color: "#666", fontSize: 14 }}>{t("kg CO₂ Economizados")}</div>
         </div>
       </div>
 
       {/* Progresso para Próximo Nível */}
       <div style={cardStyle}>
-        <h2 style={{ margin: "0 0 16px 0" }}>Progresso para Nível {userLevel.level + 1}</h2>
+        <h2 style={{ margin: "0 0 16px 0" }}>{t("Progresso para Nível")} {userLevel.level + 1}</h2>
         <div style={{ marginBottom: 8 }}>
           <div style={{
             width: "100%",
@@ -366,14 +368,14 @@ export default function PerfilPage() {
           </div>
         </div>
         <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14, color: "#666" }}>
-          <span>{userPoints} / {userLevel.pointsToNextLevel} pontos</span>
-          <span>{Math.round(userLevel.progress * 100)}% completo</span>
+          <span>{userPoints} / {userLevel.pointsToNextLevel} {t("pontos")}</span>
+          <span>{Math.round(userLevel.progress * 100)}% {t("completo")}</span>
         </div>
       </div>
 
       {/* Conquistas Recentes */}
       <div style={cardStyle}>
-        <h2 style={{ margin: "0 0 16px 0" }}>Conquistas Recentes</h2>
+        <h2 style={{ margin: "0 0 16px 0" }}>{t("Conquistas Recentes")}</h2>
         {userPoints > 0 ? (
           <div style={{ display: "grid", gap: 12, gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))" }}>
             {userPoints >= 50 && (
@@ -384,8 +386,8 @@ export default function PerfilPage() {
                 backgroundColor: "#f9fafb",
               }}>
                 <div style={{ fontSize: 24, marginBottom: 8 }}></div>
-                <h4 style={{ margin: "0 0 4px 0", fontSize: 16 }}>Primeira Missão</h4>
-                <p style={{ margin: 0, fontSize: 14, color: "#666" }}>Completou sua primeira missão sustentável</p>
+                <h4 style={{ margin: "0 0 4px 0", fontSize: 16 }}>{t("Primeira Missão")}</h4>
+                <p style={{ margin: 0, fontSize: 14, color: "#666" }}>{t("Completou sua primeira missão sustentável")}</p>
               </div>
             )}
 
@@ -397,8 +399,8 @@ export default function PerfilPage() {
                 backgroundColor: "#f9fafb",
               }}>
                 <div style={{ fontSize: 24, marginBottom: 8 }}></div>
-                <h4 style={{ margin: "0 0 4px 0", fontSize: 16 }}>Eco Warrior</h4>
-                <p style={{ margin: 0, fontSize: 14, color: "#666" }}>Economizou mais de 100kg de CO₂</p>
+                <h4 style={{ margin: "0 0 4px 0", fontSize: 16 }}>{t("Eco Warrior")}</h4>
+                <p style={{ margin: 0, fontSize: 14, color: "#666" }}>{t("Economizou mais de 100kg de CO₂")}</p>
               </div>
             )}
 
@@ -410,13 +412,13 @@ export default function PerfilPage() {
                 backgroundColor: "#f9fafb",
               }}>
                 <div style={{ fontSize: 24, marginBottom: 8 }}></div>
-                <h4 style={{ margin: "0 0 4px 0", fontSize: 16 }}>Nível {userLevel.level}</h4>
-                <p style={{ margin: 0, fontSize: 14, color: "#666" }}>Alcançou o nível {userLevel.level} no EcoHint</p>
+                <h4 style={{ margin: "0 0 4px 0", fontSize: 16 }}>{t("Nível")} {userLevel.level}</h4>
+                <p style={{ margin: 0, fontSize: 14, color: "#666" }}>{t("Alcançou o nível")} {userLevel.level} {t("no EcoHint")}</p>
               </div>
             )}
           </div>
         ) : (
-          <p style={{ color: "#666" }}>Sem conquistas ainda. Complete sua primeira missão para conquistar troféus.</p>
+          <p style={{ color: "#666" }}>{t("Sem conquistas ainda. Complete sua primeira missão para conquistar troféus.")}</p>
         )}
       </div>
     </div>

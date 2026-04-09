@@ -1,6 +1,24 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import {
+  adminFormCardStyle,
+  adminInputStyle,
+  adminSelectStyle,
+  adminTextareaStyle,
+} from "../components/formStyles";
+import {
+  adminActionDangerButtonStyle,
+  adminActionPrimaryButtonStyle,
+  adminTopActionButtonStyle,
+  adminTableCellStyle,
+  adminTableContainerStyle,
+  adminTableHeaderCellStyle,
+  adminTableHeadRowStyle,
+  adminTableRowStyle,
+  adminTableStyle,
+} from "../components/tableStyles";
+import { useLanguage } from "@/app/components/LanguageProvider";
 
 type Mission = {
   id: number;
@@ -8,6 +26,7 @@ type Mission = {
   description: string;
   type: "daily" | "monthly";
   points: number;
+  access: "free" | "premium";
   image_url?: string;
 };
 
@@ -22,6 +41,7 @@ type UserMissionPending = {
 };
 
 export default function AdminMissionsPage() {
+  const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState<"create" | "list" | "verify">("create");
   const [missions, setMissions] = useState<Mission[]>([]);
   const [pendingMissions, setPendingMissions] = useState<UserMissionPending[]>([]);
@@ -32,6 +52,7 @@ export default function AdminMissionsPage() {
   const [missionDescription, setMissionDescription] = useState("");
   const [missionType, setMissionType] = useState<"daily" | "monthly">("daily");
   const [missionPoints, setMissionPoints] = useState("");
+  const [missionAccess, setMissionAccess] = useState<"free" | "premium">("free");
   const [missionImage, setMissionImage] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -44,10 +65,10 @@ export default function AdminMissionsPage() {
     const loadData = async () => {
       try {
         const [missionsRes, pendingRes] = await Promise.all([
-          fetch("http://localhost:8000/admin/missions", {
+          fetch("/api/admin/missions", {
             headers: { Authorization: `Bearer ${token}` },
           }),
-          fetch("http://localhost:8000/admin/missions/admin/pending", {
+          fetch("/api/admin/missions/pending", {
             headers: { Authorization: `Bearer ${token}` },
           }),
         ]);
@@ -69,14 +90,14 @@ export default function AdminMissionsPage() {
     e.preventDefault();
 
     if (!missionTitle || !missionPoints) {
-      alert("Preenche os campos obrigatórios");
+      alert(t("Preenche os campos obrigatórios"));
       return;
     }
 
     setSubmitting(true);
 
     try {
-      const res = await fetch("http://localhost:8000/admin/missions/admin/create", {
+      const res = await fetch("/api/admin/missions", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -87,30 +108,32 @@ export default function AdminMissionsPage() {
           description: missionDescription,
           type: missionType,
           points: Number(missionPoints),
+          access: missionAccess,
           imageUrl: missionImage,
         }),
       });
 
       if (res.ok) {
-        alert("Missão criada com sucesso!");
+        alert(t("Missão criada com sucesso!"));
         setMissionTitle("");
         setMissionDescription("");
         setMissionType("daily");
         setMissionPoints("");
+        setMissionAccess("free");
         setMissionImage("");
         setActiveTab("list");
 
         // Reload missions
-        const data = await fetch("http://localhost:8000/admin/missions", {
+        const data = await fetch("/api/admin/missions", {
           headers: { Authorization: `Bearer ${token}` },
         }).then(r => r.json());
         setMissions(Array.isArray(data) ? data : []);
       } else {
-        alert("Erro ao criar missão");
+        alert(t("Erro ao criar missão"));
       }
     } catch (err) {
       console.error(err);
-      alert("Erro ao criar missão");
+      alert(t("Erro ao criar missão"));
     } finally {
       setSubmitting(false);
     }
@@ -121,7 +144,7 @@ export default function AdminMissionsPage() {
 
     try {
       const res = await fetch(
-        `http://localhost:8000/admin/missions/admin/${userMissionId}/verify`,
+        `/api/admin/missions/${userMissionId}/verify`,
         {
           method: "POST",
           headers: {
@@ -133,14 +156,14 @@ export default function AdminMissionsPage() {
       );
 
       if (res.ok) {
-        alert(approved ? "Missão aprovada!" : "Missão rejeitada!");
+        alert(approved ? t("Missão aprovada!") : t("Missão rejeitada!"));
         // Reload pending
-        const data = await fetch("http://localhost:8000/admin/missions/admin/pending", {
+        const data = await fetch("/api/admin/missions/pending", {
           headers: { Authorization: `Bearer ${token}` },
         }).then(r => r.json());
         setPendingMissions(Array.isArray(data) ? data : []);
       } else {
-        alert("Erro ao verificar missão");
+        alert(t("Erro ao verificar missão"));
       }
     } catch (err) {
       console.error(err);
@@ -167,47 +190,14 @@ export default function AdminMissionsPage() {
   });
 
   const formInputStyle = {
+    ...adminInputStyle,
     width: "100%",
-    padding: "10px",
-    marginBottom: 15,
-    border: "1px solid #ddd",
-    borderRadius: 5,
-    fontFamily: "inherit",
-    fontSize: 14,
-  };
-
-  const submitButtonStyle = {
-    padding: "10px 20px",
-    backgroundColor: "#22c55e",
-    color: "white",
-    border: "none",
-    borderRadius: 5,
-    cursor: "pointer",
-    fontWeight: "bold",
-  };
-
-  const approveButtonStyle = {
-    padding: "8px 16px",
-    backgroundColor: "#22c55e",
-    color: "white",
-    border: "none",
-    borderRadius: 5,
-    cursor: "pointer",
-    marginRight: 8,
-  };
-
-  const rejectButtonStyle = {
-    padding: "8px 16px",
-    backgroundColor: "#ef4444",
-    color: "white",
-    border: "none",
-    borderRadius: 5,
-    cursor: "pointer",
+    marginBottom: 12,
   };
 
   return (
     <div style={{ padding: 40 }}>
-      <h1>Gerenciar Missões</h1>
+      <h1>{t("Gerenciar Missões")}</h1>
 
       {/* Tabs */}
       <div style={{ marginBottom: 30 }}>
@@ -215,30 +205,30 @@ export default function AdminMissionsPage() {
           style={tabButtonStyle(activeTab === "create")}
           onClick={() => setActiveTab("create")}
         >
-          Criar Missão
+          {t("Criar Missão")}
         </button>
         <button
           style={tabButtonStyle(activeTab === "list")}
           onClick={() => setActiveTab("list")}
         >
-          Ver Missões
+          {t("Ver Missões")}
         </button>
         <button
           style={tabButtonStyle(activeTab === "verify")}
           onClick={() => setActiveTab("verify")}
         >
-          Verificar Submissões ({pendingMissions.length})
+          {t("Verificar Submissões")} ({pendingMissions.length})
         </button>
       </div>
 
       {/* CREATE MISSION TAB */}
       {activeTab === "create" && (
-        <div style={cardStyle}>
-          <h2>Criar Nova Missão</h2>
+        <div style={{ ...cardStyle, ...adminFormCardStyle }}>
+          <h2>{t("Criar Nova Missão")}</h2>
           <form onSubmit={handleCreateMission}>
             <input
               type="text"
-              placeholder="Título da Missão *"
+              placeholder={t("Título da Missão *")}
               value={missionTitle}
               onChange={(e) => setMissionTitle(e.target.value)}
               style={formInputStyle}
@@ -246,33 +236,42 @@ export default function AdminMissionsPage() {
             />
 
             <textarea
-              placeholder="Descrição"
+              placeholder={t("Descrição")}
               value={missionDescription}
               onChange={(e) => setMissionDescription(e.target.value)}
-              style={{ ...formInputStyle, height: 100, fontFamily: "inherit" }}
+              style={{ ...adminTextareaStyle, width: "100%", marginBottom: 12 }}
             />
 
             <select
               value={missionType}
               onChange={(e) => setMissionType(e.target.value as "daily" | "monthly")}
-              style={formInputStyle}
+              style={{ ...adminSelectStyle, width: "100%", marginBottom: 12 }}
             >
-              <option value="daily">Missão Diária</option>
-              <option value="monthly">Missão Mensal</option>
+              <option value="daily">{t("Missão Diária")}</option>
+              <option value="monthly">{t("Missão Mensal")}</option>
             </select>
 
             <input
               type="number"
-              placeholder="Pontos a Ganhar *"
+              placeholder={t("Pontos a Ganhar *")}
               value={missionPoints}
               onChange={(e) => setMissionPoints(e.target.value)}
               style={formInputStyle}
               required
             />
 
+            <select
+              value={missionAccess}
+              onChange={(e) => setMissionAccess(e.target.value as "free" | "premium")}
+              style={{ ...adminSelectStyle, width: "100%", marginBottom: 12 }}
+            >
+              <option value="free">{t("Acesso Gratuito")}</option>
+              <option value="premium">{t("Apenas Premium")}</option>
+            </select>
+
             <input
               type="text"
-              placeholder="URL da Imagem (opcional)"
+              placeholder={t("URL da Imagem (opcional)")}
               value={missionImage}
               onChange={(e) => setMissionImage(e.target.value)}
               style={formInputStyle}
@@ -280,10 +279,10 @@ export default function AdminMissionsPage() {
 
             <button
               type="submit"
-              style={submitButtonStyle}
+              style={adminTopActionButtonStyle}
               disabled={submitting}
             >
-              {submitting ? "Criando..." : "Criar Missão"}
+              {submitting ? t("Criando...") : t("Criar Missão")}
             </button>
           </form>
         </div>
@@ -292,46 +291,47 @@ export default function AdminMissionsPage() {
       {/* LIST MISSIONS TAB */}
       {activeTab === "list" && (
         <div style={cardStyle}>
-          <h2>Missões Existentes</h2>
+          <h2>{t("Missões Existentes")}</h2>
           {missions.length === 0 ? (
-            <p style={{ color: "#999" }}>Nenhuma missão criada ainda</p>
+            <p style={{ color: "#999" }}>{t("Nenhuma missão criada ainda")}</p>
           ) : (
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
-              <thead>
-                <tr style={{ backgroundColor: "#f3f4f6" }}>
-                  <th style={{ padding: 10, textAlign: "left", borderBottom: "1px solid #ddd" }}>
-                    Título
-                  </th>
-                  <th style={{ padding: 10, textAlign: "left", borderBottom: "1px solid #ddd" }}>
-                    Tipo
-                  </th>
-                  <th style={{ padding: 10, textAlign: "left", borderBottom: "1px solid #ddd" }}>
-                    Pontos
-                  </th>
-                  <th style={{ padding: 10, textAlign: "left", borderBottom: "1px solid #ddd" }}>
-                    Descrição
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {missions.map((mission) => (
-                  <tr key={mission.id}>
-                    <td style={{ padding: 10, borderBottom: "1px solid #ddd" }}>
-                      {mission.title}
-                    </td>
-                    <td style={{ padding: 10, borderBottom: "1px solid #ddd" }}>
-                      {mission.type === "daily" ? "Diária" : "Mensal"}
-                    </td>
-                    <td style={{ padding: 10, borderBottom: "1px solid #ddd", fontWeight: "bold", color: "#22c55e" }}>
-                      {mission.points}
-                    </td>
-                    <td style={{ padding: 10, borderBottom: "1px solid #ddd" }}>
-                      {mission.description?.substring(0, 50)}...
-                    </td>
+            <div style={adminTableContainerStyle}>
+              <table style={adminTableStyle}>
+                <thead>
+                  <tr style={adminTableHeadRowStyle}>
+                    <th style={adminTableHeaderCellStyle}>{t("Título")}</th>
+                    <th style={adminTableHeaderCellStyle}>{t("Tipo")}</th>
+                    <th style={adminTableHeaderCellStyle}>{t("Acesso")}</th>
+                    <th style={adminTableHeaderCellStyle}>{t("Pontos")}</th>
+                    <th style={adminTableHeaderCellStyle}>{t("Descrição")}</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {missions.map((mission, idx) => (
+                    <tr key={mission.id} style={adminTableRowStyle(idx)}>
+                      <td style={adminTableCellStyle}>{mission.title}</td>
+                      <td style={adminTableCellStyle}>{mission.type === "daily" ? t("Diária") : t("Mensal")}</td>
+                      <td style={adminTableCellStyle}>
+                        <span style={{
+                          padding: "2px 8px",
+                          borderRadius: 12,
+                          fontSize: 12,
+                          fontWeight: "bold",
+                          backgroundColor: mission.access === "premium" ? "#fef3c7" : "#d1fae5",
+                          color: mission.access === "premium" ? "#92400e" : "#065f46",
+                        }}>
+                          {mission.access === "premium" ? t("Premium") : t("Gratuito")}
+                        </span>
+                      </td>
+                      <td style={{ ...adminTableCellStyle, fontWeight: "bold", color: "#22c55e" }}>
+                        {mission.points}
+                      </td>
+                      <td style={adminTableCellStyle}>{mission.description?.substring(0, 50)}...</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
       )}
@@ -339,10 +339,10 @@ export default function AdminMissionsPage() {
       {/* VERIFY MISSIONS TAB */}
       {activeTab === "verify" && (
         <div style={cardStyle}>
-          <h2>Verificar Submissões de Missões</h2>
+          <h2>{t("Verificar Submissões de Missões")}</h2>
           {pendingMissions.length === 0 ? (
             <p style={{ color: "#999", textAlign: "center", padding: 40 }}>
-              Nenhuma missão pendente de verificação
+              {t("Nenhuma missão pendente de verificação")}
             </p>
           ) : (
             <div>
@@ -360,10 +360,10 @@ export default function AdminMissionsPage() {
                   <div style={{ marginBottom: 15 }}>
                     <h3 style={{ margin: "0 0 5px 0" }}>{pending.title}</h3>
                     <p style={{ margin: "0 0 5px 0", color: "#666", fontSize: 12 }}>
-                      <strong>Utilizador:</strong> {pending.email}
+                      <strong>{t("Utilizador:")}</strong> {pending.email}
                     </p>
                     <p style={{ margin: "0 0 10px 0", color: "#666", fontSize: 12 }}>
-                      <strong>Pontos:</strong> {pending.points} | <strong>Submetido em:</strong>{" "}
+                      <strong>{t("Pontos:")}</strong> {pending.points} | <strong>{t("Submetido em:")}</strong>{" "}
                       {new Date(pending.completed_at).toLocaleString()}
                     </p>
                   </div>
@@ -372,7 +372,7 @@ export default function AdminMissionsPage() {
                   {pending.photo_url && (
                     <img
                       src={pending.photo_url}
-                      alt="Comprovação"
+                      alt={t("Comprovação")}
                       style={{
                         maxWidth: "300px",
                         maxHeight: "300px",
@@ -385,16 +385,16 @@ export default function AdminMissionsPage() {
                   {/* Action Buttons */}
                   <div>
                     <button
-                      style={approveButtonStyle}
+                      style={{ ...adminActionPrimaryButtonStyle, marginRight: 8 }}
                       onClick={() => handleVerifyMission(pending.id, true)}
                     >
-                      ✅ Aprovar
+                      ✅ {t("Aprovar")}
                     </button>
                     <button
-                      style={rejectButtonStyle}
+                      style={adminActionDangerButtonStyle}
                       onClick={() => handleVerifyMission(pending.id, false)}
                     >
-                      ❌ Rejeitar
+                      ❌ {t("Rejeitar")}
                     </button>
                   </div>
                 </div>

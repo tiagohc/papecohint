@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useLanguage } from "@/app/components/LanguageProvider";
 
 type Article = {
   id: string;
@@ -18,14 +19,15 @@ type Category = {
 };
 
 export default function EducacaoAmbientalPage() {
+  const { t } = useLanguage();
   const [selectedArticle, setSelectedArticle] = useState<Article | null>(null);
   const [activeCategory, setActiveCategory] = useState<string>("all");
 
   const articles: Article[] = [
     {
       id: "1",
-      title: "O que é Pegada de Carbono?",
-      excerpt: "Entenda como suas ações diárias impactam o meio ambiente através da emissão de gases de efeito estufa.",
+      title: t("O que é Pegada de Carbono?"),
+      excerpt: t("Entenda como suas ações diárias impactam o meio ambiente através da emissão de gases de efeito estufa."),
       content: `
         <h3>O que é Pegada de Carbono?</h3>
         <p>A pegada de carbono é uma medida que quantifica a quantidade total de gases de efeito estufa (GEE) emitidos direta ou indiretamente por uma pessoa, organização, evento ou produto ao longo de sua vida.</p>
@@ -51,8 +53,8 @@ export default function EducacaoAmbientalPage() {
     },
     {
       id: "2",
-      title: "Mudanças Climáticas: Causas e Consequências",
-      excerpt: "As alterações climáticas estão acontecendo mais rápido do que o esperado. Saiba os impactos e o que podemos fazer.",
+      title: t("Mudanças Climáticas: Causas e Consequências"),
+      excerpt: t("As alterações climáticas estão acontecendo mais rápido do que o esperado. Saiba os impactos e o que podemos fazer."),
       content: `
         <h3>Mudanças Climáticas: Causas e Consequências</h3>
         <p>As mudanças climáticas são alterações de longo prazo nos padrões climáticos da Terra, principalmente causadas pelas atividades humanas.</p>
@@ -82,8 +84,8 @@ export default function EducacaoAmbientalPage() {
     },
     {
       id: "3",
-      title: "Economia de Energia em Casa",
-      excerpt: "Dicas práticas para reduzir o consumo de energia elétrica e contribuir para um futuro sustentável.",
+      title: t("Economia de Energia em Casa"),
+      excerpt: t("Dicas práticas para reduzir o consumo de energia elétrica e contribuir para um futuro sustentável."),
       content: `
         <h3>Economia de Energia em Casa</h3>
         <p>A energia elétrica representa uma parcela significativa da pegada de carbono de uma residência. Pequenas mudanças podem gerar grandes economias.</p>
@@ -109,8 +111,8 @@ export default function EducacaoAmbientalPage() {
     },
     {
       id: "4",
-      title: "Alimentação Sustentável",
-      excerpt: "Como suas escolhas alimentares impactam o planeta e dicas para uma dieta mais ecológica.",
+      title: t("Alimentação Sustentável"),
+      excerpt: t("Como suas escolhas alimentares impactam o planeta e dicas para uma dieta mais ecológica."),
       content: `
         <h3>Alimentação Sustentável</h3>
         <p>O sistema alimentar global é responsável por cerca de 30% das emissões de gases de efeito estufa. Suas escolhas fazem diferença!</p>
@@ -140,8 +142,8 @@ export default function EducacaoAmbientalPage() {
     },
     {
       id: "5",
-      title: "Transporte Sustentável",
-      excerpt: "Alternativas ao carro particular para reduzir emissões e melhorar a qualidade de vida nas cidades.",
+      title: t("Transporte Sustentável"),
+      excerpt: t("Alternativas ao carro particular para reduzir emissões e melhorar a qualidade de vida nas cidades."),
       content: `
         <h3>Transporte Sustentável</h3>
         <p>O transporte é responsável por 14% das emissões globais de CO₂. Mudar seus hábitos de mobilidade pode fazer uma grande diferença.</p>
@@ -178,12 +180,12 @@ export default function EducacaoAmbientalPage() {
   ];
 
   const categories: Category[] = [
-    { id: "all", label: "Todos", icon: "🌍" },
-    { id: "basico", label: "Básico", icon: "📚" },
-    { id: "clima", label: "Clima", icon: "🌡️" },
-    { id: "energia", label: "Energia", icon: "⚡" },
-    { id: "alimentacao", label: "Alimentação", icon: "🥗" },
-    { id: "transporte", label: "Transporte", icon: "🚲" },
+    { id: "all", label: t("Todos"), icon: "🌍" },
+    { id: "basico", label: t("Básico"), icon: "📚" },
+    { id: "clima", label: t("Clima"), icon: "🌡️" },
+    { id: "energia", label: t("Energia"), icon: "⚡" },
+    { id: "alimentacao", label: t("Alimentação"), icon: "🥗" },
+    { id: "transporte", label: t("Transporte"), icon: "🚲" },
   ];
 
   const filteredArticles = activeCategory === "all"
@@ -201,16 +203,15 @@ export default function EducacaoAmbientalPage() {
   return (
     <div style={{ padding: 40, maxWidth: 1200, margin: "0 auto" }}>
       <div style={cardStyle}>
-        <h1 style={{ margin: 0, marginBottom: 10 }}>Educação Ambiental</h1>
+        <h1 style={{ margin: 0, marginBottom: 10 }}>{t("Educação Ambiental")}</h1>
         <p style={{ margin: 0, color: "#666" }}>
-          Aprenda sobre sustentabilidade, mudanças climáticas e como suas ações diárias impactam o planeta.
-          Conhecimento é o primeiro passo para a mudança!
+          {t("Aprenda sobre sustentabilidade, mudanças climáticas e como suas ações diárias impactam o planeta. Conhecimento é o primeiro passo para a mudança!")}
         </p>
       </div>
 
       {/* Categories */}
       <div style={cardStyle}>
-        <h2 style={{ margin: "0 0 15px 0" }}>Tópicos</h2>
+        <h2 style={{ margin: "0 0 15px 0" }}>{t("Tópicos")}</h2>
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
           {categories.map(category => (
             <button
@@ -239,7 +240,7 @@ export default function EducacaoAmbientalPage() {
       {/* Articles List or Article Detail */}
       {!selectedArticle ? (
         <div style={cardStyle}>
-          <h2 style={{ margin: "0 0 20px 0" }}>Artigos Disponíveis</h2>
+          <h2 style={{ margin: "0 0 20px 0" }}>{t("Artigos Disponíveis")}</h2>
           <div style={{ display: "grid", gap: 16, gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))" }}>
             {filteredArticles.map(article => (
               <div
@@ -270,7 +271,7 @@ export default function EducacaoAmbientalPage() {
                     {categories.find(c => c.id === article.category)?.label || article.category}
                   </span>
                   <span style={{ fontSize: 12, color: "#666" }}>
-                    ⏱️ {article.readTime} min
+                    ⏱️ {article.readTime} {t("min de leitura")}
                   </span>
                 </div>
               </div>
@@ -294,7 +295,7 @@ export default function EducacaoAmbientalPage() {
                   {categories.find(c => c.id === selectedArticle.category)?.label || selectedArticle.category}
                 </span>
                 <span style={{ fontSize: 12, color: "#666" }}>
-                  ⏱️ {selectedArticle.readTime} min de leitura
+                  ⏱️ {selectedArticle.readTime} {t("min de leitura")}
                 </span>
               </div>
             </div>
@@ -309,7 +310,7 @@ export default function EducacaoAmbientalPage() {
                 fontSize: 14,
               }}
             >
-              ← Voltar
+              {t("← Voltar")}
             </button>
           </div>
 
@@ -322,24 +323,24 @@ export default function EducacaoAmbientalPage() {
 
       {/* Quick Tips */}
       <div style={cardStyle}>
-        <h2 style={{ margin: "0 0 15px 0" }}>Dicas Rápidas</h2>
+        <h2 style={{ margin: "0 0 15px 0" }}>{t("Dicas Rápidas")}</h2>
         <div style={{ display: "grid", gap: 12, gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))" }}>
           <div style={{ padding: 16, backgroundColor: "#f0fdf4", borderRadius: 8 }}>
-            <h4 style={{ margin: "0 0 8px 0", color: "#16a34a" }}>Pequenas ações contam</h4>
+            <h4 style={{ margin: "0 0 8px 0", color: "#16a34a" }}>{t("Pequenas ações contam")}</h4>
             <p style={{ margin: 0, fontSize: 14, color: "#166534" }}>
-              Mesmo ações simples como desligar aparelhos ou usar sacolas reutilizáveis fazem diferença quando praticadas por milhões.
+              {t("Mesmo ações simples como desligar aparelhos ou usar sacolas reutilizáveis fazem diferença quando praticadas por milhões.")}
             </p>
           </div>
           <div style={{ padding: 16, backgroundColor: "#fef3c7", borderRadius: 8 }}>
-            <h4 style={{ margin: "0 0 8px 0", color: "#ca8a04" }}>Conheça seu impacto</h4>
+            <h4 style={{ margin: "0 0 8px 0", color: "#ca8a04" }}>{t("Conheça seu impacto")}</h4>
             <p style={{ margin: 0, fontSize: 14, color: "#92400e" }}>
-              Use calculadoras de pegada de carbono para entender como suas escolhas afetam o planeta.
+              {t("Use calculadoras de pegada de carbono para entender como suas escolhas afetam o planeta.")}
             </p>
           </div>
           <div style={{ padding: 16, backgroundColor: "#dbeafe", borderRadius: 8 }}>
-            <h4 style={{ margin: "0 0 8px 0", color: "#2563eb" }}>Faça parte da mudança</h4>
+            <h4 style={{ margin: "0 0 8px 0", color: "#2563eb" }}>{t("Faça parte da mudança")}</h4>
             <p style={{ margin: 0, fontSize: 14, color: "#1e40af" }}>
-              Compartilhe conhecimento e incentive amigos e família a adotarem práticas sustentáveis.
+              {t("Compartilhe conhecimento e incentive amigos e família a adotarem práticas sustentáveis.")}
             </p>
           </div>
         </div>

@@ -1,52 +1,86 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useLanguage } from "@/app/components/LanguageProvider";
 
 type Notification = {
-  id: string;
+  id: number;
   title: string;
   message: string;
-  type: "mission" | "reward" | "system" | "reminder";
-  isRead: boolean;
-  createdAt: string;
+  type: string;
+  read_status: number;
+  created_at: string;
 };
 
 export default function NotificacoesPage() {
+  const { t } = useLanguage();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+
+  const fetchNotifications = () => {
+    if (!token) return;
+    fetch("/api/user/notifications", {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((r) => r.json())
+      .then((data) => {
+        setNotifications(Array.isArray(data) ? data : []);
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.error(err);
+        setLoading(false);
+      });
+  };
+
   useEffect(() => {
-    // Sem notificações iniciais até o backend fornecer dados reais
-    setNotifications([]);
-    setLoading(false);
+    fetchNotifications();
   }, []);
 
-  const markAsRead = (id: string) => {
-    setNotifications((prev) =>
-      prev.map((notif) =>
-        notif.id === id ? { ...notif, isRead: true } : notif
-      )
-    );
+  const markAsRead = (id: number) => {
+    if (!token) return;
+    fetch(`/api/user/notifications/${id}/read`, {
+      method: "PUT",
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(() => {
+        setNotifications((prev) =>
+          prev.map((notif) =>
+            notif.id === id ? { ...notif, read_status: 1 } : notif
+          )
+        );
+      })
+      .catch(console.error);
   };
 
   const markAllAsRead = () => {
-    setNotifications((prev) =>
-      prev.map((notif) => ({ ...notif, isRead: true }))
-    );
+    if (!token) return;
+    fetch("/api/user/notifications/read-all", {
+      method: "PUT",
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(() => {
+        setNotifications((prev) =>
+          prev.map((notif) => ({ ...notif, read_status: 1 }))
+        );
+      })
+      .catch(console.error);
   };
 
   const getTypeIcon = (type: string) => {
     switch (type) {
       case "mission":
-        return "Missão";
+        return t("Missão");
       case "reward":
-        return "Recompensa";
+        return t("Recompensa");
       case "system":
-        return "Sistema";
+        return t("Sistema");
       case "reminder":
-        return "Lembrete";
+        return t("Lembrete");
       default:
-        return "Notificação";
+        return t("Notificação");
     }
   };
 
@@ -73,12 +107,12 @@ export default function NotificacoesPage() {
     const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
     const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
-    if (diffMins < 60) return `${diffMins} min atrás`;
-    if (diffHours < 24) return `${diffHours} h atrás`;
-    return `${diffDays} dias atrás`;
+    if (diffMins < 60) return `${diffMins} ${t("min atrás")}`;
+    if (diffHours < 24) return `${diffHours} ${t("h atrás")}`;
+    return `${diffDays} ${t("dias atrás")}`;
   };
 
-  const unreadCount = notifications.filter((n) => !n.isRead).length;
+  const unreadCount = notifications.filter((n) => n.read_status === 0).length;
 
   const cardStyle: React.CSSProperties = {
     padding: 20,
@@ -88,18 +122,18 @@ export default function NotificacoesPage() {
     marginBottom: 20,
   };
 
-  if (loading) return <p>Carregando notificações...</p>;
+  if (loading) return <p>{t("Carregando notificações...")}</p>;
 
   return (
     <div style={{ padding: 40, maxWidth: 1000, margin: "0 auto" }}>
       <div style={cardStyle}>
-        <h1 style={{ margin: 0, marginBottom: 10 }}>Notificações</h1>
+        <h1 style={{ margin: 0, marginBottom: 10 }}>{t("Notificações")}</h1>
         <p style={{ margin: "8px 0 0 0", color: "#666" }}>
-          Fique por dentro das últimas atualizações, missões aprovadas e lembretes.
+          {t("Fique por dentro das últimas atualizações, missões aprovadas e lembretes.")}
         </p>
         {unreadCount > 0 && (
           <p style={{ margin: "10px 0 0 0", color: "#22c55e", fontWeight: "bold" }}>
-            Você tem {unreadCount} notificação(ões) não lida(s).
+            {unreadCount} {t("notificação(ões) não lida(s).")}
           </p>
         )}
       </div>
@@ -118,16 +152,16 @@ export default function NotificacoesPage() {
               fontWeight: 600,
             }}
           >
-            Marcar todas como lidas
+            {t("Marcar todas como lidas")}
           </button>
         </div>
       )}
 
       <div style={cardStyle}>
-        <h2 style={{ margin: "0 0 18px 0" }}>Todas as notificações</h2>
+        <h2 style={{ margin: "0 0 18px 0" }}>{t("Todas as notificações")}</h2>
 
         {notifications.length === 0 ? (
-          <p style={{ color: "#666" }}>Nenhuma notificação disponível.</p>
+          <p style={{ color: "#666" }}>{t("Nenhuma notificação disponível.")}</p>
         ) : (
           <div style={{ display: "grid", gap: 12 }}>
             {notifications.map((notif) => (
@@ -136,8 +170,8 @@ export default function NotificacoesPage() {
                 style={{
                   padding: 16,
                   borderRadius: 10,
-                  backgroundColor: notif.isRead ? "#f9fafb" : "#e0f2f1",
-                  border: notif.isRead ? "1px solid #e5e7eb" : "1px solid #22c55e",
+                  backgroundColor: notif.read_status === 1 ? "#f9fafb" : "#e0f2f1",
+                  border: notif.read_status === 1 ? "1px solid #e5e7eb" : "1px solid #22c55e",
                   display: "flex",
                   alignItems: "flex-start",
                   gap: 12,
@@ -165,13 +199,13 @@ export default function NotificacoesPage() {
                       {notif.title}
                     </h3>
                     <span style={{ fontSize: 12, color: "#666" }}>
-                      {formatTimeAgo(notif.createdAt)}
+                      {formatTimeAgo(notif.created_at)}
                     </span>
                   </div>
                   <p style={{ margin: 0, color: "#444", fontSize: 14 }}>
                     {notif.message}
                   </p>
-                  {!notif.isRead && (
+                  {notif.read_status === 0 && (
                     <button
                       onClick={() => markAsRead(notif.id)}
                       style={{
@@ -185,7 +219,7 @@ export default function NotificacoesPage() {
                         fontSize: 12,
                       }}
                     >
-                      Marcar como lida
+                      {t("Marcar como lida")}
                     </button>
                   )}
                 </div>

@@ -1,5 +1,14 @@
 "use client";
 import { useEffect, useState } from "react";
+import { useLanguage } from "@/app/components/LanguageProvider";
+import {
+  adminTableCellStyle,
+  adminTableContainerStyle,
+  adminTableHeaderCellStyle,
+  adminTableHeadRowStyle,
+  adminTableRowStyle,
+  adminTableStyle,
+} from "../components/tableStyles";
 
 type Summary = {
   totalUsers: number;
@@ -10,6 +19,7 @@ type Summary = {
   totalMissions: number;
   totalStock: number;
   avgPointsCost: number;
+  totalPremiumUsers: number;
 };
 
 type PartnerStats = {
@@ -28,6 +38,7 @@ type TopReward = {
 };
 
 export default function ReportsPage() {
+  const { t } = useLanguage();
   const [summary, setSummary] = useState<Summary | null>(null);
   const [partnerStats, setPartnerStats] = useState<PartnerStats[]>([]);
   const [topRewards, setTopRewards] = useState<TopReward[]>([]);
@@ -39,16 +50,16 @@ export default function ReportsPage() {
     if (!token) return;
 
     Promise.all([
-      fetch("http://localhost:8000/admin/reports/summary", {
+      fetch("/api/admin/reports/summary", {
         headers: { Authorization: `Bearer ${token}` },
       }).then(r => r.json()),
-      fetch("http://localhost:8000/admin/reports/rewards-by-partner", {
+      fetch("/api/admin/reports/rewards-by-partner", {
         headers: { Authorization: `Bearer ${token}` },
       }).then(r => r.json()),
-      fetch("http://localhost:8000/admin/reports/top-rewards", {
+      fetch("/api/admin/reports/top-rewards", {
         headers: { Authorization: `Bearer ${token}` },
       }).then(r => r.json()),
-      fetch("http://localhost:8000/admin/reports/users-by-role", {
+      fetch("/api/admin/reports/users-by-role", {
         headers: { Authorization: `Bearer ${token}` },
       }).then(r => r.json()),
     ])
@@ -62,7 +73,7 @@ export default function ReportsPage() {
       .catch(console.error);
   }, [token]);
 
-  if (loading) return <p>Carregando relatórios...</p>;
+  if (loading) return <p>{t("Carregando relatórios...")}</p>;
 
   const cardStyle = {
     padding: 20,
@@ -78,43 +89,55 @@ export default function ReportsPage() {
     marginBottom: 10,
   };
 
+  const roleLabel = (role: string) => {
+    if (role === "admin") return t("Administrador");
+    if (role === "partner") return t("Parceiro");
+    return t("Utilizador");
+  };
+
   return (
     <div style={{ padding: 40 }}>
-      <h1>Relatórios</h1>
+      <h1>{t("Relatórios")}</h1>
 
       {/* Resumo Geral */}
       {summary && (
         <div style={cardStyle}>
-          <div style={titleStyle}>Resumo Geral</div>
+          <div style={titleStyle}>{t("Resumo Geral")}</div>
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(4, 1fr)",
+              gridTemplateColumns: "repeat(5, 1fr)",
               gap: 15,
             }}
           >
             <div style={{ padding: 10, backgroundColor: "#f0f0f0", borderRadius: 5 }}>
-              <p style={{ margin: 0, color: "#666" }}>Total Utilizadores</p>
+              <p style={{ margin: 0, color: "#666" }}>{t("Total Utilizadores")}</p>
               <p style={{ margin: "5px 0 0 0", fontSize: 24, fontWeight: "bold" }}>
                 {summary.totalUsers}
               </p>
             </div>
             <div style={{ padding: 10, backgroundColor: "#f0f0f0", borderRadius: 5 }}>
-              <p style={{ margin: 0, color: "#666" }}>Admins</p>
+              <p style={{ margin: 0, color: "#666" }}>{t("Admins")}</p>
               <p style={{ margin: "5px 0 0 0", fontSize: 24, fontWeight: "bold" }}>
                 {summary.totalAdmins}
               </p>
             </div>
             <div style={{ padding: 10, backgroundColor: "#f0f0f0", borderRadius: 5 }}>
-              <p style={{ margin: 0, color: "#666" }}>Utilizadores Normais</p>
+              <p style={{ margin: 0, color: "#666" }}>{t("Utilizadores Normais")}</p>
               <p style={{ margin: "5px 0 0 0", fontSize: 24, fontWeight: "bold" }}>
                 {summary.totalRegularUsers}
               </p>
             </div>
             <div style={{ padding: 10, backgroundColor: "#f0f0f0", borderRadius: 5 }}>
-              <p style={{ margin: 0, color: "#666" }}>Total Parceiros</p>
+              <p style={{ margin: 0, color: "#666" }}>{t("Total Parceiros")}</p>
               <p style={{ margin: "5px 0 0 0", fontSize: 24, fontWeight: "bold" }}>
                 {summary.totalPartners}
+              </p>
+            </div>
+            <div style={{ padding: 10, backgroundColor: "#fef3c7", borderRadius: 5 }}>
+              <p style={{ margin: 0, color: "#92400e" }}>{t("Utilizadores Premium")}</p>
+              <p style={{ margin: "5px 0 0 0", fontSize: 24, fontWeight: "bold", color: "#92400e" }}>
+                {summary.totalPremiumUsers}
               </p>
             </div>
           </div>
@@ -127,25 +150,25 @@ export default function ReportsPage() {
             }}
           >
             <div style={{ padding: 10, backgroundColor: "#f0f0f0", borderRadius: 5 }}>
-              <p style={{ margin: 0, color: "#666" }}>Total Rewards</p>
+              <p style={{ margin: 0, color: "#666" }}>{t("Total Rewards")}</p>
               <p style={{ margin: "5px 0 0 0", fontSize: 24, fontWeight: "bold" }}>
                 {summary.totalRewards}
               </p>
             </div>
             <div style={{ padding: 10, backgroundColor: "#f0f0f0", borderRadius: 5 }}>
-              <p style={{ margin: 0, color: "#666" }}>Total Missões</p>
+              <p style={{ margin: 0, color: "#666" }}>{t("Total Missões")}</p>
               <p style={{ margin: "5px 0 0 0", fontSize: 24, fontWeight: "bold" }}>
                 {summary.totalMissions}
               </p>
             </div>
             <div style={{ padding: 10, backgroundColor: "#f0f0f0", borderRadius: 5 }}>
-              <p style={{ margin: 0, color: "#666" }}>Stock Total</p>
+              <p style={{ margin: 0, color: "#666" }}>{t("Stock Total")}</p>
               <p style={{ margin: "5px 0 0 0", fontSize: 24, fontWeight: "bold" }}>
                 {summary.totalStock}
               </p>
             </div>
             <div style={{ padding: 10, backgroundColor: "#f0f0f0", borderRadius: 5 }}>
-              <p style={{ margin: 0, color: "#666" }}>Custo Médio Pontos</p>
+              <p style={{ margin: 0, color: "#666" }}>{t("Custo Médio Pontos")}</p>
               <p style={{ margin: "5px 0 0 0", fontSize: 24, fontWeight: "bold" }}>
                 {summary.avgPointsCost !== null && summary.avgPointsCost !== undefined 
                   ? Number(summary.avgPointsCost).toFixed(2) 
@@ -158,107 +181,77 @@ export default function ReportsPage() {
 
       {/* Utilizadores por Tipo */}
       <div style={cardStyle}>
-        <div style={titleStyle}>Utilizadores por Tipo</div>
-        <table style={{ width: "100%", borderCollapse: "collapse" }}>
-          <thead>
-            <tr style={{ backgroundColor: "#f4f4f4" }}>
-              <th style={{ padding: 10, textAlign: "left", borderBottom: "1px solid #ddd" }}>
-                Tipo
-              </th>
-              <th style={{ padding: 10, textAlign: "left", borderBottom: "1px solid #ddd" }}>
-                Quantidade
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {usersByRole.map((role) => (
-              <tr key={role.role}>
-                <td style={{ padding: 10, borderBottom: "1px solid #ddd" }}>
-                  {role.role === "admin" ? "Administrador" : "Utilizador"}
-                </td>
-                <td style={{ padding: 10, borderBottom: "1px solid #ddd" }}>
-                  {role.count}
-                </td>
+        <div style={titleStyle}>{t("Utilizadores por Tipo")}</div>
+        <div style={adminTableContainerStyle}>
+          <table style={adminTableStyle}>
+            <thead>
+              <tr style={adminTableHeadRowStyle}>
+                <th style={adminTableHeaderCellStyle}>{t("Tipo")}</th>
+                <th style={adminTableHeaderCellStyle}>{t("Quantidade")}</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {usersByRole.map((role, idx) => (
+                <tr key={role.role} style={adminTableRowStyle(idx)}>
+                  <td style={adminTableCellStyle}>{roleLabel(role.role)}</td>
+                  <td style={adminTableCellStyle}>{role.count}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* Rewards por Parceiro */}
       <div style={cardStyle}>
-        <div style={titleStyle}>Rewards por Parceiro</div>
-        <table style={{ width: "100%", borderCollapse: "collapse" }}>
-          <thead>
-            <tr style={{ backgroundColor: "#f4f4f4" }}>
-              <th style={{ padding: 10, textAlign: "left", borderBottom: "1px solid #ddd" }}>
-                Parceiro
-              </th>
-              <th style={{ padding: 10, textAlign: "left", borderBottom: "1px solid #ddd" }}>
-                Total Rewards
-              </th>
-              <th style={{ padding: 10, textAlign: "left", borderBottom: "1px solid #ddd" }}>
-                Stock Total
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {partnerStats.map((partner) => (
-              <tr key={partner.id}>
-                <td style={{ padding: 10, borderBottom: "1px solid #ddd" }}>
-                  {partner.name}
-                </td>
-                <td style={{ padding: 10, borderBottom: "1px solid #ddd" }}>
-                  {partner.totalRewards || 0}
-                </td>
-                <td style={{ padding: 10, borderBottom: "1px solid #ddd" }}>
-                  {partner.totalStock || 0}
-                </td>
+        <div style={titleStyle}>{t("Rewards por Parceiro")}</div>
+        <div style={adminTableContainerStyle}>
+          <table style={adminTableStyle}>
+            <thead>
+              <tr style={adminTableHeadRowStyle}>
+                <th style={adminTableHeaderCellStyle}>{t("Parceiro")}</th>
+                <th style={adminTableHeaderCellStyle}>{t("Total Rewards")}</th>
+                <th style={adminTableHeaderCellStyle}>{t("Stock Total")}</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {partnerStats.map((partner, idx) => (
+                <tr key={partner.id} style={adminTableRowStyle(idx)}>
+                  <td style={adminTableCellStyle}>{partner.name}</td>
+                  <td style={adminTableCellStyle}>{partner.totalRewards || 0}</td>
+                  <td style={adminTableCellStyle}>{partner.totalStock || 0}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* Top 10 Rewards */}
       <div style={cardStyle}>
-        <div style={titleStyle}>Top 10 Rewards com Mais Stock</div>
-        <table style={{ width: "100%", borderCollapse: "collapse" }}>
-          <thead>
-            <tr style={{ backgroundColor: "#f4f4f4" }}>
-              <th style={{ padding: 10, textAlign: "left", borderBottom: "1px solid #ddd" }}>
-                Nome
-              </th>
-              <th style={{ padding: 10, textAlign: "left", borderBottom: "1px solid #ddd" }}>
-                Parceiro
-              </th>
-              <th style={{ padding: 10, textAlign: "left", borderBottom: "1px solid #ddd" }}>
-                Pontos
-              </th>
-              <th style={{ padding: 10, textAlign: "left", borderBottom: "1px solid #ddd" }}>
-                Stock
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {topRewards.map((reward) => (
-              <tr key={reward.id}>
-                <td style={{ padding: 10, borderBottom: "1px solid #ddd" }}>
-                  {reward.name}
-                </td>
-                <td style={{ padding: 10, borderBottom: "1px solid #ddd" }}>
-                  {reward.partnerName || "N/A"}
-                </td>
-                <td style={{ padding: 10, borderBottom: "1px solid #ddd" }}>
-                  {reward.points}
-                </td>
-                <td style={{ padding: 10, borderBottom: "1px solid #ddd" }}>
-                  {reward.availableStock}
-                </td>
+        <div style={titleStyle}>{t("Top 10 Rewards com Mais Stock")}</div>
+        <div style={adminTableContainerStyle}>
+          <table style={adminTableStyle}>
+            <thead>
+              <tr style={adminTableHeadRowStyle}>
+                <th style={adminTableHeaderCellStyle}>{t("Nome")}</th>
+                <th style={adminTableHeaderCellStyle}>{t("Parceiro")}</th>
+                <th style={adminTableHeaderCellStyle}>{t("Pontos")}</th>
+                <th style={adminTableHeaderCellStyle}>{t("Stock")}</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {topRewards.map((reward, idx) => (
+                <tr key={reward.id} style={adminTableRowStyle(idx)}>
+                  <td style={adminTableCellStyle}>{reward.name}</td>
+                  <td style={adminTableCellStyle}>{reward.partnerName || "N/A"}</td>
+                  <td style={adminTableCellStyle}>{reward.points}</td>
+                  <td style={adminTableCellStyle}>{reward.availableStock}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

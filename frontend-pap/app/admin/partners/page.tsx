@@ -1,19 +1,49 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useLanguage } from "@/app/components/LanguageProvider";
+import {
+  adminFormCardStyle,
+  adminFormRowStyle,
+  adminInputStyle,
+} from "../components/formStyles";
+import {
+  adminActionDangerButtonStyle,
+  adminActionPrimaryButtonStyle,
+  adminActionSecondaryButtonStyle,
+  adminTableCellStyle,
+  adminTableContainerStyle,
+  adminTableHeaderCellStyle,
+  adminTableHeadRowStyle,
+  adminTableRowStyle,
+  adminTableStyle,
+  adminTopActionButtonStyle,
+} from "../components/tableStyles";
 
-type Partner = { id: number; name: string; description?: string; active?: number };
+type Partner = {
+  id: number;
+  name: string;
+  description?: string;
+  active?: number;
+  partner_user_id?: number | null;
+  partner_account_email?: string;
+};
 
 export default function PartnersPage() {
+  const { t } = useLanguage();
   const [partners, setPartners] = useState<Partner[]>([]);
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
   const [newPartnerName, setNewPartnerName] = useState("");
   const [newPartnerDescription, setNewPartnerDescription] = useState("");
+  const [accountName, setAccountName] = useState("");
+  const [accountEmail, setAccountEmail] = useState("");
+  const [accountPassword, setAccountPassword] = useState("");
   const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
   const router = useRouter();
 
   const fetchPartners = () => {
     if (!token) return;
-    fetch("http://localhost:8000/admin/partners", { headers: { Authorization: `Bearer ${token}` } })
+    fetch("/api/admin/partners", { headers: { Authorization: `Bearer ${token}` } })
       .then(res => res.json())
       .then(setPartners)
       .catch(console.error);
@@ -22,8 +52,8 @@ export default function PartnersPage() {
   useEffect(() => { fetchPartners(); }, [token]);
 
   const handleDeletePartner = async (id: number) => {
-    if (!confirm("Apagar parceiro?")) return;
-    await fetch(`http://localhost:8000/admin/partners/${id}`, {
+    if (!confirm(t("Apagar parceiro?"))) return;
+    await fetch(`/api/admin/partners/${id}`, {
       method: "DELETE",
       headers: { Authorization: `Bearer ${token}` },
     });
@@ -32,57 +62,207 @@ export default function PartnersPage() {
 
   const handleAddPartner = async () => {
     if (!newPartnerName.trim()) return;
-    await fetch("http://localhost:8000/admin/partners", {
+    if (!accountEmail.trim() || !accountPassword.trim()) {
+      alert(t("Email e password da conta do parceiro são obrigatórios"));
+      return;
+    }
+
+    const res = await fetch("/api/admin/partners", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ name: newPartnerName, description: newPartnerDescription }),
+      body: JSON.stringify({
+        name: newPartnerName,
+        description: newPartnerDescription,
+        account_name: accountName || undefined,
+        account_email: accountEmail || undefined,
+        account_password: accountPassword || undefined,
+      }),
     });
+
+    const data = await res.json();
+    if (!res.ok) {
+      alert(data?.error || t("Erro ao criar parceiro"));
+      return;
+    }
+
     setNewPartnerName("");
     setNewPartnerDescription("");
+    setAccountName("");
+    setAccountEmail("");
+    setAccountPassword("");
     fetchPartners();
   };
 
+  const handleCreateAccountForExistingPartner = async (partnerId: number) => {
+    const email = prompt(t("Email da conta do parceiro:"));
+    if (!email) return;
+
+    const password = prompt(t("Password da conta do parceiro:"));
+    if (!password) return;
+
+    const displayName = prompt(t("Nome da conta (opcional):")) || undefined;
+
+    const res = await fetch(`/api/admin/partners/${partnerId}/account`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({
+        account_name: displayName,
+        account_email: email,
+        account_password: password,
+      }),
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      alert(data?.error || t("Erro ao associar conta ao parceiro"));
+      return;
+    }
+
+    alert(t("Conta associada com sucesso"));
+    fetchPartners();
+  };
+
+  const filteredPartners = partners.filter((p) => {
+    if (statusFilter === "active") return Boolean(p.partner_user_id);
+    if (statusFilter === "inactive") return !p.partner_user_id;
+    return true;
+  });
+
   return (
     <div style={{ padding: 40 }}>
-      <h1>Parceiros</h1>
-      <div style={{ marginBottom: 20 }}>
+      <h1>{t("Parceiros")}</h1>
+      <div style={{ marginBottom: 16, display: "flex", gap: 8 }}>
+        <button
+          onClick={() => setStatusFilter("all")}
+          style={{
+            padding: "8px 12px",
+            borderRadius: 6,
+            border: "1px solid #d1d5db",
+            backgroundColor: statusFilter === "all" ? "#1f2937" : "#fff",
+            color: statusFilter === "all" ? "#fff" : "#111827",
+            cursor: "pointer",
+          }}
+        >
+          {t("Todos")}
+        </button>
+        <button
+          onClick={() => setStatusFilter("active")}
+          style={{
+            padding: "8px 12px",
+            borderRadius: 6,
+            border: "1px solid #d1d5db",
+            backgroundColor: statusFilter === "active" ? "#166534" : "#fff",
+            color: statusFilter === "active" ? "#fff" : "#111827",
+            cursor: "pointer",
+          }}
+        >
+          {t("Só com conta ativa")}
+        </button>
+        <button
+          onClick={() => setStatusFilter("inactive")}
+          style={{
+            padding: "8px 12px",
+            borderRadius: 6,
+            border: "1px solid #d1d5db",
+            backgroundColor: statusFilter === "inactive" ? "#991b1b" : "#fff",
+            color: statusFilter === "inactive" ? "#fff" : "#111827",
+            cursor: "pointer",
+          }}
+        >
+          {t("Só sem acesso")}
+        </button>
+      </div>
+      <div style={{ ...adminFormCardStyle, marginBottom: 20 }}>
+        <div style={adminFormRowStyle}>
         <input
           type="text"
-          placeholder="Nome do Parceiro"
+          placeholder={t("Nome do Parceiro")}
           value={newPartnerName}
           onChange={(e) => setNewPartnerName(e.target.value)}
-          style={{ marginRight: 10 }}
+          style={adminInputStyle}
         />
         <input
           type="text"
-          placeholder="Descrição (opcional)"
+          placeholder={t("Descrição (opcional)")}
           value={newPartnerDescription}
           onChange={(e) => setNewPartnerDescription(e.target.value)}
-          style={{ marginRight: 10 }}
+          style={adminInputStyle}
         />
-        <button onClick={handleAddPartner}>Adicionar Parceiro</button>
+        <input
+          type="text"
+          placeholder={t("Nome da Conta (opcional)")}
+          value={accountName}
+          onChange={(e) => setAccountName(e.target.value)}
+          style={adminInputStyle}
+        />
+        <input
+          type="email"
+          placeholder={t("Email da Conta *")}
+          value={accountEmail}
+          onChange={(e) => setAccountEmail(e.target.value)}
+          required
+          style={adminInputStyle}
+        />
+        <input
+          type="password"
+          placeholder={t("Password da Conta *")}
+          value={accountPassword}
+          onChange={(e) => setAccountPassword(e.target.value)}
+          required
+          style={adminInputStyle}
+        />
+        <button onClick={handleAddPartner} style={adminTopActionButtonStyle}>{t("Adicionar Parceiro")}</button>
+        </div>
       </div>
-      <table style={{ width: "100%", borderCollapse: "collapse" }}>
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Nome</th>
-            <th>Ações</th>
-          </tr>
-        </thead>
-        <tbody>
-          {partners.map(p => (
-            <tr key={p.id}>
-              <td>{p.id}</td>
-              <td>{p.name}</td>
-              <td>
-                <button onClick={() => router.push(`/admin/partners/${p.id}`)}>Ver Produtos</button>
-                <button onClick={() => handleDeletePartner(p.id)} style={{ marginLeft: 10, color: "red" }}>Apagar</button>
-              </td>
+      <div style={adminTableContainerStyle}>
+        <table style={adminTableStyle}>
+          <thead>
+            <tr style={adminTableHeadRowStyle}>
+              <th style={adminTableHeaderCellStyle}>{t("ID")}</th>
+              <th style={adminTableHeaderCellStyle}>{t("Nome")}</th>
+              <th style={adminTableHeaderCellStyle}>{t("Conta Parceiro")}</th>
+              <th style={adminTableHeaderCellStyle}>{t("Estado")}</th>
+              <th style={adminTableHeaderCellStyle}>{t("Ações")}</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {filteredPartners.map((p, idx) => (
+              <tr key={p.id} style={adminTableRowStyle(idx)}>
+                <td style={adminTableCellStyle}>{p.id}</td>
+                <td style={adminTableCellStyle}>{p.name}</td>
+                <td style={adminTableCellStyle}>{p.partner_account_email || t("Sem conta")}</td>
+                <td style={adminTableCellStyle}>
+                <span
+                  style={{
+                    display: "inline-block",
+                    padding: "4px 10px",
+                    borderRadius: 999,
+                    fontSize: 12,
+                    fontWeight: 700,
+                    backgroundColor: p.partner_user_id ? "#dcfce7" : "#fee2e2",
+                    color: p.partner_user_id ? "#166534" : "#991b1b",
+                  }}
+                >
+                  {p.partner_user_id ? t("Conta ativa") : t("Sem acesso")}
+                </span>
+                </td>
+                <td style={adminTableCellStyle}>
+                  <button onClick={() => router.push(`/admin/partners/${p.id}`)} style={adminActionSecondaryButtonStyle}>{t("Ver Produtos")}</button>
+                  {!p.partner_user_id && (
+                    <button
+                      onClick={() => handleCreateAccountForExistingPartner(p.id)}
+                      style={{ ...adminActionPrimaryButtonStyle, marginLeft: 10 }}
+                    >
+                      {t("Criar Conta")}
+                    </button>
+                  )}
+                  <button onClick={() => handleDeletePartner(p.id)} style={{ ...adminActionDangerButtonStyle, marginLeft: 10 }}>{t("Apagar")}</button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

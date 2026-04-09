@@ -2,6 +2,15 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
+import {
+  adminErrorTextStyle,
+  adminFormCardStyle,
+  adminFormGridStyle,
+  adminInputStyle,
+  adminSelectStyle,
+  adminTextareaStyle,
+} from "../../components/formStyles";
+import { adminTopActionButtonStyle } from "../../components/tableStyles";
 
 type Partner = { id: number; name: string };
 
@@ -26,7 +35,7 @@ export default function EditRewardPage() {
   useEffect(() => {
     if (!token || !rewardId) return;
 
-    fetch(`http://localhost:8000/admin/rewards/${rewardId}`, {
+    fetch(`/api/admin/rewards/${rewardId}`, {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((res) => res.json())
@@ -44,7 +53,7 @@ export default function EditRewardPage() {
         setLoading(false);
       });
 
-    fetch("http://localhost:8000/admin/partners", {
+    fetch("/api/admin/partners", {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((res) => res.json())
@@ -64,7 +73,7 @@ export default function EditRewardPage() {
     setError("");
 
     try {
-      const res = await fetch(`http://localhost:8000/admin/rewards/${rewardId}`, {
+      const res = await fetch(`/api/admin/rewards/${rewardId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -99,21 +108,21 @@ export default function EditRewardPage() {
     <div style={{ padding: 40, maxWidth: 600, margin: "0 auto" }}>
       <h1>Editar Reward</h1>
 
-      {error && <p style={{ color: "red" }}>{error}</p>}
+      {error && <p style={adminErrorTextStyle}>{error}</p>}
 
-      <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-        <input type="text" placeholder="Nome" value={name} onChange={(e) => setName(e.target.value)} required />
-        <textarea placeholder="Descrição" value={description} onChange={(e) => setDescription(e.target.value)} />
-        <input type="number" placeholder="Pontos" value={points} onChange={(e) => setPoints(e.target.value)} required />
-        <input type="number" placeholder="Stock" value={stock} onChange={(e) => setStock(e.target.value)} required />
-        <input type="text" placeholder="URL da imagem (opcional)" value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} />
-        <select value={partnerId} onChange={(e) => setPartnerId(e.target.value === "" ? "" : Number(e.target.value))} required>
+      <form onSubmit={handleSubmit} style={{ ...adminFormCardStyle, ...adminFormGridStyle }}>
+        <input type="text" placeholder="Nome" value={name} onChange={(e) => setName(e.target.value)} required style={adminInputStyle} />
+        <textarea placeholder="Descrição" value={description} onChange={(e) => setDescription(e.target.value)} style={adminTextareaStyle} />
+        <input type="number" placeholder="Pontos" value={points} onChange={(e) => setPoints(e.target.value)} required style={adminInputStyle} />
+        <input type="number" placeholder="Stock" value={stock} onChange={(e) => setStock(e.target.value)} required style={adminInputStyle} />
+        <input type="text" placeholder="URL da imagem (opcional)" value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} style={adminInputStyle} />
+        <select value={partnerId} onChange={(e) => setPartnerId(e.target.value === "" ? "" : Number(e.target.value))} required style={adminSelectStyle}>
           <option value="">Selecionar parceiro</option>
           {partners.map((p) => (
             <option key={p.id} value={p.id}>{p.name}</option>
           ))}
         </select>
-        <button type="submit" disabled={saving}>
+        <button type="submit" disabled={saving} style={adminTopActionButtonStyle}>
           {saving ? "A atualizar..." : "Atualizar Reward"}
         </button>
       </form>

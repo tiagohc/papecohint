@@ -1,6 +1,25 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import {
+  adminFormGridStyle,
+  adminInputStyle,
+  adminModalBackdropStyle,
+  adminModalCardStyle,
+  adminSelectStyle,
+} from "../components/formStyles";
+import { useLanguage } from "@/app/components/LanguageProvider";
+import {
+  adminActionDangerButtonStyle,
+  adminActionSecondaryButtonStyle,
+  adminTableCellStyle,
+  adminTableContainerStyle,
+  adminTableHeaderCellStyle,
+  adminTableHeadRowStyle,
+  adminTableRowStyle,
+  adminTableStyle,
+  adminTopActionButtonStyle,
+} from "../components/tableStyles";
 
 type User = {
   id: number;
@@ -8,9 +27,11 @@ type User = {
   email: string;
   role: string;
   status: string;
+  is_premium: number;
 };
 
 export default function AdminUsers() {
+  const { t } = useLanguage();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
@@ -24,6 +45,8 @@ export default function AdminUsers() {
 
   const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
 
+  const adminUsersUrl = () => `/api/admin/users?ts=${Date.now()}`;
+
   const fetchUsers = () => {
     if (!token) {
       window.location.href = "/";
@@ -31,12 +54,12 @@ export default function AdminUsers() {
     }
 
     setLoading(true);
-    fetch("http://localhost:8000/admin/users", {
+    fetch(adminUsersUrl(), {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((res) => res.json())
       .then((data) => {
-        setUsers(data);
+        setUsers(Array.isArray(data) ? data : []);
         setLoading(false);
       })
       .catch((err) => {
@@ -76,7 +99,7 @@ export default function AdminUsers() {
 
     const body: any = { name, email, role, status };
     if (!editingUser) {
-      if (!password) return alert("Preencha a senha");
+      if (!password) return alert(t("Preencha a senha"));
       body.password = password;
     } else if (password) {
       body.password = password;
@@ -84,8 +107,8 @@ export default function AdminUsers() {
 
     const method = editingUser ? "PUT" : "POST";
     const url = editingUser
-      ? `http://localhost:8000/admin/users/${editingUser.id}`
-      : "http://localhost:8000/admin/users";
+      ? `/api/admin/users/${editingUser.id}`
+      : "/api/admin/users";
 
     try {
       const res = await fetch(url, {
@@ -99,104 +122,126 @@ export default function AdminUsers() {
 
       if (!res.ok) {
         const errData = await res.json();
-        return alert(errData.error || "Erro no servidor");
+        return alert(errData.error || t("Erro no servidor"));
       }
 
       closeModal();
       fetchUsers();
     } catch (err) {
       console.error(err);
-      alert("Erro de conexão");
+      alert(t("Erro de conexão"));
     }
   };
 
   const deleteUser = async (id: number) => {
     if (!token) return;
-    if (!confirm("Deseja realmente deletar este usuário?")) return;
+    if (!confirm(t("Deseja realmente deletar este usuário?"))) return;
 
     try {
-      await fetch(`http://localhost:8000/admin/users/${id}`, {
+      await fetch(`/api/admin/users/${id}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });
       fetchUsers();
     } catch (err) {
       console.error(err);
-      alert("Erro ao deletar usuário");
+      alert(t("Erro ao deletar usuário"));
     }
   };
 
   if (loading)
     return (
       <div style={{ padding: 40 }}>
-        <p>Carregando usuários...</p>
+        <p>{t("Carregando usuários...")}</p>
       </div>
     );
 
   return (
     <div style={{ padding: 40 }}>
-      <h1>Painel de Admin - Usuários</h1>
+      <h1>{t("Painel de Admin - Usuários")}</h1>
       <button
         onClick={() => openModal()}
-        style={{ marginBottom: 20, padding: "8px 16px", backgroundColor: "#2e7d32", color: "#fff", border: "none", borderRadius: 5 }}
+        style={{ ...adminTopActionButtonStyle, marginBottom: 20 }}
       >
-        Novo Usuário
+        {t("Novo Usuário")}
       </button>
 
-      <table style={{ width: "100%", borderCollapse: "collapse" }}>
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Nome</th>
-            <th>Email</th>
-            <th>Role</th>
-            <th>Status</th>
-            <th>Ações</th>
-          </tr>
-        </thead>
-        <tbody>
-          {users.map((u) => (
-            <tr key={u.id} style={{ backgroundColor: "#f0f0f0", marginBottom: 4 }}>
-              <td>{u.id}</td>
-              <td>{u.name}</td>
-              <td>{u.email}</td>
-              <td>{u.role}</td>
-              <td>{u.status}</td>
-              <td>
-                <button onClick={() => openModal(u)} style={{ marginRight: 8 }}>Editar</button>
-                <button onClick={() => deleteUser(u.id)} style={{ backgroundColor: "#e53935", color: "#fff" }}>Deletar</button>
-              </td>
+      <div style={adminTableContainerStyle}>
+        <table style={adminTableStyle}>
+          <thead>
+            <tr style={adminTableHeadRowStyle}>
+              <th style={adminTableHeaderCellStyle}>{t("ID")}</th>
+              <th style={adminTableHeaderCellStyle}>{t("Nome")}</th>
+              <th style={adminTableHeaderCellStyle}>{t("Email")}</th>
+              <th style={adminTableHeaderCellStyle}>{t("Role")}</th>
+              <th style={adminTableHeaderCellStyle}>{t("Premium")}</th>
+              <th style={adminTableHeaderCellStyle}>{t("Status")}</th>
+              <th style={adminTableHeaderCellStyle}>{t("Ações")}</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {users.map((u, idx) => (
+              <tr key={u.id} style={adminTableRowStyle(idx)}>
+                <td style={adminTableCellStyle}>{u.id}</td>
+                <td style={adminTableCellStyle}>{u.name}</td>
+                <td style={adminTableCellStyle}>{u.email}</td>
+                <td style={adminTableCellStyle}>{u.role}</td>
+                <td style={adminTableCellStyle}>
+                  {u.role === "user" ? (
+                    <span style={{
+                      padding: "2px 8px",
+                      borderRadius: 12,
+                      fontSize: 12,
+                      fontWeight: "bold",
+                      backgroundColor: u.is_premium ? "#fef3c7" : "#f3f4f6",
+                      color: u.is_premium ? "#92400e" : "#6b7280",
+                    }}>
+                      {u.is_premium ? t("Sim") : t("Não")}
+                    </span>
+                  ) : (
+                    <span style={{ color: "#9ca3af", fontSize: 12 }}>—</span>
+                  )}
+                </td>
+                <td style={adminTableCellStyle}>{u.status}</td>
+                <td style={adminTableCellStyle}>
+                  <button onClick={() => openModal(u)} style={{ ...adminActionSecondaryButtonStyle, marginRight: 8 }}>{t("Editar")}</button>
+                  <button onClick={() => deleteUser(u.id)} style={adminActionDangerButtonStyle}>{t("Deletar")}</button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
 
       {/* Modal */}
       {modalOpen && (
-        <div style={{ position: "fixed", inset: 0, backgroundColor: "rgba(0,0,0,0.5)", display: "flex", justifyContent: "center", alignItems: "center" }}>
+        <div style={adminModalBackdropStyle}>
           <form
             onSubmit={handleSubmit}
-            style={{ backgroundColor: "#fff", padding: 20, borderRadius: 8, display: "flex", flexDirection: "column", minWidth: 300 }}
+            style={adminModalCardStyle}
           >
-            <h2>{editingUser ? "Editar Usuário" : "Novo Usuário"}</h2>
+            <h2>{editingUser ? t("Editar Usuário") : t("Novo Usuário")}</h2>
 
-            <input placeholder="Nome" value={name} onChange={(e) => setName(e.target.value)} required style={{ marginBottom: 10 }} />
-            <input placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required style={{ marginBottom: 10 }} />
-            <input placeholder="Senha" type="password" value={password} onChange={(e) => setPassword(e.target.value)} style={{ marginBottom: 10 }} />
+            <div style={adminFormGridStyle}>
+              <input placeholder={t("Nome")} value={name} onChange={(e) => setName(e.target.value)} required style={adminInputStyle} />
+              <input placeholder={t("Email")} value={email} onChange={(e) => setEmail(e.target.value)} required style={adminInputStyle} />
+              <input placeholder={t("Senha")} type="password" value={password} onChange={(e) => setPassword(e.target.value)} style={adminInputStyle} />
             
-            <select value={role} onChange={(e) => setRole(e.target.value)} style={{ marginBottom: 10 }}>
-              <option value="user">user</option>
-              <option value="admin">admin</option>
-            </select>
+              <select value={role} onChange={(e) => setRole(e.target.value)} style={adminSelectStyle}>
+                <option value="user">user</option>
+                <option value="partner">partner</option>
+                <option value="admin">admin</option>
+              </select>
 
-            <select value={status} onChange={(e) => setStatus(e.target.value)} style={{ marginBottom: 10 }}>
-              <option value="active">active</option>
-              <option value="inactive">inactive</option>
-            </select>
+              <select value={status} onChange={(e) => setStatus(e.target.value)} style={adminSelectStyle}>
+                <option value="active">active</option>
+                <option value="inactive">inactive</option>
+              </select>
+            </div>
 
             <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
-              <button type="button" onClick={closeModal}>Cancelar</button>
-              <button type="submit">{editingUser ? "Salvar" : "Criar"}</button>
+              <button type="button" onClick={closeModal}>{t("Cancelar")}</button>
+              <button type="submit">{editingUser ? t("Salvar") : t("Criar")}</button>
             </div>
           </form>
         </div>

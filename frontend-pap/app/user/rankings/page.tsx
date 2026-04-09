@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { carbonSavedFromPoints, getLevelFromPoints, niceNumber } from "@/lib/progress";
+import { useLanguage } from "@/app/components/LanguageProvider";
 
 type RankingItem = {
   id: number;
@@ -13,6 +14,7 @@ type RankingItem = {
 };
 
 export default function RankingsPage() {
+  const { t } = useLanguage();
   const [userPoints, setUserPoints] = useState(0);
 
   useEffect(() => {
@@ -33,7 +35,7 @@ export default function RankingsPage() {
       const getCurrentUser = () => {
         if (!storedUser) return null;
         const parsed = JSON.parse(storedUser);
-        const name = parsed?.name || "Utilizador";
+        const name = parsed?.name || t("Utilizador");
         return {
           id: parsed?.id || 0,
           name,
@@ -52,7 +54,7 @@ export default function RankingsPage() {
       }
 
       try {
-        const response = await fetch("http://localhost:8000/admin/users", {
+        const response = await fetch("/api/admin/users", {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await response.json();
@@ -110,21 +112,21 @@ export default function RankingsPage() {
   return (
     <div style={{ padding: 40, maxWidth: 1100, margin: "0 auto" }}>
       <div style={cardStyle}>
-        <h1 style={{ margin: 0, marginBottom: 10 }}>Rankings</h1>
+        <h1 style={{ margin: 0, marginBottom: 10 }}>{t("Rankings")}</h1>
         <p style={{ margin: 0, color: "#666" }}>
-          Compare seu progresso com outros usuários em termos de nível e redução de pegada de carbono.
+          {t("Compare seu progresso com outros usuários em termos de nível e redução de pegada de carbono.")}
         </p>
       </div>
 
       <div style={cardStyle}>
-        <h2 style={{ margin: "0 0 18px 0" }}>Seu resumo</h2>
+        <h2 style={{ margin: "0 0 18px 0" }}>{t("Seu resumo")}</h2>
         <div style={{ display: "flex", gap: 15, flexWrap: "wrap" }}>
           <div style={{ flex: 1, minWidth: 220, padding: 18, borderRadius: 10, backgroundColor: "#f0fdf4" }}>
-            <p style={{ margin: 0, fontSize: 12, color: "#555" }}>Nível atual</p>
+            <p style={{ margin: 0, fontSize: 12, color: "#555" }}>{t("Nível atual")}</p>
             <p style={{ margin: "8px 0 0 0", fontSize: 32, fontWeight: 700, color: "#16a34a" }}>{userLevel}</p>
           </div>
           <div style={{ flex: 1, minWidth: 220, padding: 18, borderRadius: 10, backgroundColor: "#e0f2fe" }}>
-            <p style={{ margin: 0, fontSize: 12, color: "#555" }}>Pegada de carbono</p>
+            <p style={{ margin: 0, fontSize: 12, color: "#555" }}>{t("Pegada de carbono")}</p>
             <p style={{ margin: "8px 0 0 0", fontSize: 32, fontWeight: 700, color: "#0284c7" }}>
               {niceNumber(userCarbon)} kg
             </p>
@@ -139,9 +141,9 @@ export default function RankingsPage() {
       </div>
 
       <div style={cardStyle}>
-        <h2 style={{ margin: "0 0 18px 0" }}>Top do ranking</h2>
+        <h2 style={{ margin: "0 0 18px 0" }}>{t("Top do ranking")}</h2>
         {ranking.length === 0 ? (
-          <p style={{ color: "#666" }}>Ainda não há ranking disponível. Complete missões para aparecer no ranking.</p>
+          <p style={{ color: "#666" }}>{t("Ainda não há ranking disponível. Complete missões para aparecer no ranking.")}</p>
         ) : (
           <div style={{ display: "grid", gap: 10 }}>
             {ranking.map((item, index) => (
@@ -179,7 +181,7 @@ export default function RankingsPage() {
                   <div>
                     <div style={{ fontWeight: 700 }}>{item.name}</div>
                     <div style={{ fontSize: 12, color: "#555" }}>
-                      Nível {item.level} • {niceNumber(item.carbon)} kg CO₂
+                      {t("Nível")} {item.level} • {niceNumber(item.carbon)} kg CO₂
                     </div>
                   </div>
                 </div>

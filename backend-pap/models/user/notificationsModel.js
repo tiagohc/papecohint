@@ -57,6 +57,23 @@ async function createNotification(userId, { title, message, type = "info" }) {
   return result.insertId;
 }
 
+// Registar FCM token
+async function registerFcmToken(userId, token) {
+  await db.query(
+    `INSERT INTO fcm_tokens (user_id, token) VALUES (?, ?)
+     ON DUPLICATE KEY UPDATE created_at = CURRENT_TIMESTAMP`,
+    [userId, token]
+  );
+}
+
+// Remover FCM token
+async function unregisterFcmToken(userId, token) {
+  await db.query(
+    "DELETE FROM fcm_tokens WHERE user_id = ? AND token = ?",
+    [userId, token]
+  );
+}
+
 module.exports = {
   getUserNotifications,
   getUserNotificationById,
@@ -64,4 +81,6 @@ module.exports = {
   markAllNotificationsAsRead,
   getUnreadCount,
   createNotification,
+  registerFcmToken,
+  unregisterFcmToken,
 };

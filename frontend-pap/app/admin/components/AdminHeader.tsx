@@ -2,16 +2,21 @@
 
 import React, { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
+import HeaderToggles from "@/components/HeaderToggles";
+import { useLanguage } from "@/app/components/LanguageProvider";
+import { useTheme } from "next-themes";
 
 export default function AdminHeader() {
   const router = useRouter();
   const pathname = usePathname();
+  const { t } = useLanguage();
+  const { setTheme } = useTheme();
   const [user, setUser] = useState<{ email: string; name?: string } | null>(null);
 
   useEffect(() => {
     const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
     if (token) {
-      fetch("http://localhost:8000/me", {
+      fetch("/api/me", {
         headers: { Authorization: `Bearer ${token}` },
       })
         .then(r => r.json())
@@ -21,19 +26,21 @@ export default function AdminHeader() {
   }, []);
 
   const handleLogout = () => {
+    setTheme("light");
+    localStorage.removeItem("theme");
     localStorage.removeItem("token");
     router.push("/");
   };
 
   const sectionTitleMap: Record<string, string> = {
-    "/admin/users": "Utilizadores",
-    "/admin/partners": "Parceiros",
-    "/admin/rewards": "Produtos",
-    "/admin/missions": "Missões",
-    "/admin/reports": "Relatórios",
+    "/admin/users": t("Utilizadores"),
+    "/admin/partners": t("Parceiros"),
+    "/admin/rewards": t("Produtos"),
+    "/admin/missions": t("Missões"),
+    "/admin/reports": t("Relatórios"),
   };
 
-  const sectionTitle = sectionTitleMap[pathname] || "Dashboard";
+  const sectionTitle = sectionTitleMap[pathname] || t("Dashboard");
 
   return (
     <header
@@ -48,7 +55,11 @@ export default function AdminHeader() {
       }}
     >
       <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-        <img src="/logo.png" alt="EcoHint" style={{ width: 42, height: 42 }} />
+        <img
+          src="/logoback.png"
+          alt="EcoHint"
+          style={{ width: 42, height: 42, objectFit: "contain" }}
+        />
         <div>
           <h1 style={{ margin: 0, fontSize: 24, fontWeight: "bold", color: "#1f2937" }}>
             {sectionTitle}
@@ -62,9 +73,10 @@ export default function AdminHeader() {
         style={{
           display: "flex",
           alignItems: "center",
-          gap: 20,
+          gap: 12,
         }}
       >
+        <HeaderToggles />
         <button
           onClick={handleLogout}
           style={{
