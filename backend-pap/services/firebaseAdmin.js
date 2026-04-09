@@ -12,14 +12,26 @@ function initFirebase() {
 
   if (projectId && clientEmail && privateKey) {
     try {
-      // Handle different formats: escaped \n, real newlines, or JSON-encoded strings
-      let parsedKey = privateKey;
+      let parsedKey = privateKey.trim();
       // If the key is wrapped in quotes, remove them
-      if (parsedKey.startsWith('"') && parsedKey.endsWith('"')) {
-        parsedKey = JSON.parse(parsedKey);
+      if ((parsedKey.startsWith('"') && parsedKey.endsWith('"')) ||
+          (parsedKey.startsWith("'") && parsedKey.endsWith("'"))) {
+        parsedKey = parsedKey.slice(1, -1);
       }
       // Replace literal \n with real newlines
       parsedKey = parsedKey.replace(/\\n/g, "\n");
+      // Ensure it starts/ends with proper PEM markers
+      if (!parsedKey.startsWith("-----BEGIN")) {
+        parsedKey = "-----BEGIN PRIVATE KEY-----\n" + parsedKey;
+      }
+      if (!parsedKey.endsWith("-----\n") && !parsedKey.endsWith("-----")) {
+        parsedKey = parsedKey + "\n-----END PRIVATE KEY-----\n";
+      }
+
+      console.log("🔑 Private key starts with:", parsedKey.substring(0, 30));
+      console.log("🔑 Private key ends with:", parsedKey.substring(parsedKey.length - 30));
+      console.log("🔑 Private key length:", parsedKey.length);
+      console.log("🔑 Contains real newlines:", parsedKey.includes("\n"));
 
       admin.initializeApp({
         credential: admin.credential.cert({
