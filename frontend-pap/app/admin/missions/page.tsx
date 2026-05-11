@@ -250,10 +250,6 @@ export default function AdminMissionsPage() {
 
       if (res.ok) {
         alert(t("Conclusão removida. A missão pode ser repetida."));
-        const data = await fetch("/api/admin/missions/completions", {
-          headers: { Authorization: `Bearer ${token}` },
-        }).then(r => r.json());
-        setCompletions(Array.isArray(data) ? data : []);
       } else {
         alert(t("Erro ao fazer reset da missão"));
       }
