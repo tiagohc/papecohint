@@ -2,6 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useLanguage } from "@/app/components/LanguageProvider";
+import Modal from "@/components/Modal";
+import PartnerForm from "@/components/PartnerForm";
+import FallbackImage from "@/components/FallbackImage";
 
 type Reward = {
   id: number;
@@ -10,11 +13,23 @@ type Reward = {
   points: number;
   stock: number;
   image_url?: string;
+  status: string;
 };
 
 export default function PartnerPage() {
   const { t } = useLanguage();
   const [products, setProducts] = useState<Reward[]>([]);
+  const [isPartnerModalOpen, setIsPartnerModalOpen] = useState(false);
+  const [partnerFormSubmitted, setPartnerFormSubmitted] = useState(false);
+    const handleOpenPartnerModal = () => setIsPartnerModalOpen(true);
+    const handleClosePartnerModal = () => {
+      setIsPartnerModalOpen(false);
+      setPartnerFormSubmitted(false);
+    };
+    const handlePartnerFormSubmit = (data: { name: string; email: string; company: string }) => {
+      setPartnerFormSubmitted(true);
+      setTimeout(handleClosePartnerModal, 2000);
+    };
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -101,6 +116,7 @@ export default function PartnerPage() {
     setStock("");
     setImageUrl("");
     setSubmitting(false);
+    setFormOpen(false);
     loadProducts();
   };
 
@@ -135,6 +151,8 @@ export default function PartnerPage() {
     }
   };
 
+  const [formOpen, setFormOpen] = useState(false);
+
   const totalProducts = products.length;
   const totalStock = products.reduce((sum, product) => sum + (Number(product.stock) || 0), 0);
   const averagePoints = totalProducts > 0
@@ -143,50 +161,14 @@ export default function PartnerPage() {
   const lowStockProducts = products.filter((product) => Number(product.stock) <= 5).length;
 
   const shellCardStyle = {
-    backgroundColor: "#ffffff",
-    borderRadius: 18,
-    boxShadow: "0 12px 32px rgba(15, 23, 42, 0.08)",
-    border: "1px solid rgba(148, 163, 184, 0.18)",
+    backgroundColor: "var(--bg-card)",
+    borderRadius: 12,
+    boxShadow: "0 8px 24px rgba(15, 23, 42, 0.06)",
+    border: "1px solid var(--border)",
   } as const;
 
   return (
     <div style={{ display: "grid", gap: 24 }}>
-      <section
-        style={{
-          ...shellCardStyle,
-          padding: 28,
-          background: "linear-gradient(135deg, #0f766e 0%, #14b8a6 55%, #99f6e4 100%)",
-          color: "#f8fafc",
-        }}
-      >
-        <div style={{ display: "flex", justifyContent: "space-between", gap: 24, flexWrap: "wrap" }}>
-          <div style={{ maxWidth: 620 }}>
-            <p style={{ margin: 0, fontSize: 13, letterSpacing: 1.2, textTransform: "uppercase", opacity: 0.88 }}>
-              {t("Gestão do parceiro")}
-            </p>
-            <h2 style={{ margin: "10px 0 12px 0", fontSize: 34, lineHeight: 1.15 }}>
-              {t("Controla o catálogo e define os pontos dos teus produtos.")}
-            </h2>
-            <p style={{ margin: 0, maxWidth: 560, color: "rgba(248,250,252,0.88)", lineHeight: 1.6 }}>
-              {t("Cria novos artigos, ajusta os pontos em tempo real e acompanha rapidamente o stock mais baixo.")}
-            </p>
-          </div>
-
-          <div
-            style={{
-              minWidth: 240,
-              padding: 18,
-              borderRadius: 16,
-              background: "rgba(255,255,255,0.16)",
-              backdropFilter: "blur(8px)",
-            }}
-          >
-            <div style={{ fontSize: 13, opacity: 0.9, marginBottom: 8 }}>{t("Estado rápido")}</div>
-            <div style={{ fontSize: 28, fontWeight: 700, marginBottom: 4 }}>{totalProducts}</div>
-            <div style={{ fontSize: 14, opacity: 0.9 }}>{t("produtos publicados")}</div>
-          </div>
-        </div>
-      </section>
 
       <section
         style={{
@@ -197,173 +179,234 @@ export default function PartnerPage() {
       >
         {[
           { label: t("Produtos"), value: totalProducts, tone: "#0f766e" },
-          { label: t("Stock total"), value: totalStock, tone: "#0369a1" },
+          { label: t("Stock total"), value: totalStock, tone: "#0f766e" },
           { label: t("Média de pontos"), value: averagePoints, tone: "#7c3aed" },
           { label: t("Stock baixo"), value: lowStockProducts, tone: "#b45309" },
         ].map((item) => (
           <div key={item.label} style={{ ...shellCardStyle, padding: 20 }}>
-            <div style={{ fontSize: 13, color: "#64748b", marginBottom: 10 }}>{item.label}</div>
+            <div style={{ fontSize: 13, color: "var(--text-secondary)", marginBottom: 10 }}>{item.label}</div>
             <div style={{ fontSize: 30, fontWeight: 700, color: item.tone }}>{item.value}</div>
           </div>
         ))}
       </section>
 
-      <section
-        style={{
-          display: "grid",
-          gridTemplateColumns: "minmax(320px, 420px) minmax(0, 1fr)",
-          gap: 24,
-          alignItems: "start",
-        }}
-      >
-        <div style={{ ...shellCardStyle, padding: 24 }}>
-          <div style={{ marginBottom: 18 }}>
-            <h3 style={{ margin: 0, fontSize: 22, color: "#0f172a" }}>{t("Adicionar produto")}</h3>
-            <p style={{ margin: "8px 0 0 0", color: "#64748b", fontSize: 14 }}>
-              {t("Define o nome, a descrição, os pontos e o stock inicial do novo produto.")}
+      {/* Table — main section */}
+      <div style={{ ...shellCardStyle, padding: 24 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18, gap: 16 }}>
+          <div>
+            <h3 style={{ margin: 0, fontSize: 20, color: "var(--text-main)" }}>{t("Catálogo atual")}</h3>
+            <p style={{ margin: "8px 0 0 0", color: "var(--text-secondary)", fontSize: 14 }}>
+              {t("Atualiza pontos e stock diretamente na tabela.")}
             </p>
           </div>
-
-          <form onSubmit={createProduct} style={{ display: "grid", gap: 12 }}>
-            <input value={name} onChange={(e) => setName(e.target.value)} placeholder={t("Nome do produto")} />
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder={t("Descrição")}
-              style={{ minHeight: 110, resize: "vertical" }}
-            />
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-              <input value={points} onChange={(e) => setPoints(e.target.value)} type="number" min={0} placeholder={t("Pontos")} />
-              <input value={stock} onChange={(e) => setStock(e.target.value)} type="number" min={0} placeholder={t("Stock")} />
-            </div>
-            <input value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder={t("URL da imagem (opcional)")} />
-            <button
-              type="submit"
-              disabled={submitting}
-              style={{
-                padding: "12px 18px",
-                borderRadius: 10,
-                border: "none",
-                background: "linear-gradient(135deg, #0f766e, #14b8a6)",
-                color: "#fff",
-                fontWeight: 700,
-                cursor: "pointer",
-              }}
-            >
-              {submitting ? t("A guardar...") : t("Adicionar produto")}
-            </button>
-          </form>
-
-          {error && <p style={{ color: "#b91c1c", marginTop: 14 }}>{error}</p>}
-        </div>
-
-        <div style={{ ...shellCardStyle, padding: 24 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18, gap: 16 }}>
-            <div>
-              <h3 style={{ margin: 0, fontSize: 22, color: "#0f172a" }}>{t("Catálogo atual")}</h3>
-              <p style={{ margin: "8px 0 0 0", color: "#64748b", fontSize: 14 }}>
-                {t("Atualiza pontos e stock diretamente na tabela.")}
-              </p>
-            </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <div
               style={{
-                padding: "8px 12px",
+                padding: "6px 12px",
                 borderRadius: 999,
-                backgroundColor: "#ecfeff",
-                color: "#0f766e",
+                backgroundColor: "#dcfce7",
+                color: "#166534",
                 fontWeight: 700,
                 fontSize: 13,
               }}
             >
               {totalProducts} {t("itens")}
             </div>
-          </div>
-
-          {loading ? (
-            <p style={{ color: "#64748b" }}>{t("A carregar produtos...")}</p>
-          ) : products.length === 0 ? (
-            <div
+            <button
+              onClick={() => setFormOpen(true)}
               style={{
-                border: "1px dashed #cbd5e1",
-                borderRadius: 16,
-                padding: 28,
-                textAlign: "center",
-                color: "#64748b",
-                backgroundColor: "#f8fafc",
+                padding: "10px 16px",
+                borderRadius: 10,
+                border: "1px solid #0f766e",
+                backgroundColor: "#0f766e",
+                color: "#fff",
+                fontWeight: 700,
+                fontSize: 14,
+                cursor: "pointer",
               }}
             >
-              {t("Ainda não tens produtos registados. Usa o formulário ao lado para publicar o primeiro.")}
-            </div>
-          ) : (
-            <div style={{ overflowX: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                <thead>
-                  <tr style={{ backgroundColor: "#f8fafc" }}>
-                    <th style={{ textAlign: "left", borderBottom: "1px solid #e2e8f0", padding: 12 }}>{t("Produto")}</th>
-                    <th style={{ textAlign: "left", borderBottom: "1px solid #e2e8f0", padding: 12 }}>{t("Pontos")}</th>
-                    <th style={{ textAlign: "left", borderBottom: "1px solid #e2e8f0", padding: 12 }}>{t("Stock")}</th>
-                    <th style={{ textAlign: "left", borderBottom: "1px solid #e2e8f0", padding: 12 }}>{t("Ações")}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {products.map((p) => (
-                    <tr key={p.id}>
-                      <td style={{ borderBottom: "1px solid #edf2f7", padding: 12 }}>
-                        <div style={{ fontWeight: 700, color: "#0f172a", marginBottom: 4 }}>{p.name}</div>
-                        <div style={{ color: "#64748b", fontSize: 13 }}>{p.description || t("Sem descrição")}</div>
-                      </td>
-                      <td style={{ borderBottom: "1px solid #edf2f7", padding: 12 }}>
-                        <input
-                          type="number"
-                          min={0}
-                          value={p.points}
-                          onChange={(e) =>
-                            setProducts((curr) =>
-                              curr.map((item) => (item.id === p.id ? { ...item, points: Number(e.target.value) } : item))
-                            )
-                          }
-                          onBlur={() => updateProduct(p.id, { points: p.points })}
-                          style={{ width: 110 }}
-                        />
-                      </td>
-                      <td style={{ borderBottom: "1px solid #edf2f7", padding: 12 }}>
-                        <input
-                          type="number"
-                          min={0}
-                          value={p.stock}
-                          onChange={(e) =>
-                            setProducts((curr) =>
-                              curr.map((item) => (item.id === p.id ? { ...item, stock: Number(e.target.value) } : item))
-                            )
-                          }
-                          onBlur={() => updateProduct(p.id, { stock: p.stock })}
-                          style={{ width: 110 }}
-                        />
-                      </td>
-                      <td style={{ borderBottom: "1px solid #edf2f7", padding: 12 }}>
-                        <button
-                          onClick={() => deleteProduct(p.id)}
-                          style={{
-                            padding: "10px 14px",
-                            borderRadius: 8,
-                            border: "none",
-                            backgroundColor: "#fee2e2",
-                            color: "#b91c1c",
-                            fontWeight: 700,
-                            cursor: "pointer",
-                          }}
-                        >
-                          {t("Apagar")}
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+              {t("Adicionar produto")}
+            </button>
+          </div>
         </div>
-      </section>
+
+        {loading ? (
+          <p style={{ color: "var(--text-secondary)" }}>{t("A carregar produtos...")}</p>
+        ) : products.length === 0 ? (
+          <div
+            style={{
+              border: "1px dashed var(--border)",
+              borderRadius: 10,
+              padding: 28,
+              textAlign: "center",
+              color: "var(--text-secondary)",
+              backgroundColor: "var(--bg-secondary, #f8fafc)",
+            }}
+          >
+            {t("Ainda não tens produtos registados.")}
+          </div>
+        ) : (
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+              <thead>
+                <tr style={{ backgroundColor: "var(--bg-secondary, #edf3fb)" }}>
+                  <th style={{ textAlign: "left", borderBottom: "1px solid var(--border)", padding: "12px 14px", fontSize: 13, fontWeight: 700, color: "var(--text-main)" }}>{t("Produto")}</th>
+                  <th style={{ textAlign: "left", borderBottom: "1px solid var(--border)", padding: "12px 14px", fontSize: 13, fontWeight: 700, color: "var(--text-main)" }}>{t("Estado")}</th>
+                  <th style={{ textAlign: "left", borderBottom: "1px solid var(--border)", padding: "12px 14px", fontSize: 13, fontWeight: 700, color: "var(--text-main)" }}>{t("Pontos")}</th>
+                  <th style={{ textAlign: "left", borderBottom: "1px solid var(--border)", padding: "12px 14px", fontSize: 13, fontWeight: 700, color: "var(--text-main)" }}>{t("Stock")}</th>
+                  <th style={{ textAlign: "left", borderBottom: "1px solid var(--border)", padding: "12px 14px", fontSize: 13, fontWeight: 700, color: "var(--text-main)" }}>{t("Ações")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {products.map((p) => (
+                  <tr key={p.id}>
+                    <td style={{ borderBottom: "1px solid var(--border)", padding: "12px 14px" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                        <FallbackImage
+                          src={p.image_url || ""}
+                          alt={p.name}
+                          style={{ width: 44, height: 44, objectFit: "cover", borderRadius: 8, background: "var(--bg-secondary, #f1f5f9)" }}
+                        />
+                        <div>
+                          <div style={{ fontWeight: 700, color: "var(--text-main)", marginBottom: 4 }}>{p.name}</div>
+                          <div style={{ color: "var(--text-secondary)", fontSize: 13 }}>{p.description || t("Sem descrição")}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td style={{ borderBottom: "1px solid var(--border)", padding: "12px 14px" }}>
+                      <span style={{
+                        padding: "4px 10px", borderRadius: 999, fontSize: 12, fontWeight: 700,
+                        backgroundColor: p.status === "approved" ? "#dcfce7" : p.status === "pending" ? "#fef3c7" : "#fee2e2",
+                        color: p.status === "approved" ? "#166534" : p.status === "pending" ? "#92400e" : "#991b1b",
+                      }}>
+                        {p.status === "approved" ? t("Aprovado") : p.status === "pending" ? t("Pendente") : t("Rejeitado")}
+                      </span>
+                    </td>
+                    <td style={{ borderBottom: "1px solid var(--border)", padding: "12px 14px" }}>
+                      <input
+                        type="number"
+                        min={0}
+                        value={p.points}
+                        onChange={(e) =>
+                          setProducts((curr) =>
+                            curr.map((item) => (item.id === p.id ? { ...item, points: Number(e.target.value) } : item))
+                          )
+                        }
+                        onBlur={() => updateProduct(p.id, { points: p.points })}
+                        style={{ width: 90 }}
+                      />
+                    </td>
+                    <td style={{ borderBottom: "1px solid var(--border)", padding: "12px 14px" }}>
+                      <input
+                        type="number"
+                        min={0}
+                        value={p.stock}
+                        onChange={(e) =>
+                          setProducts((curr) =>
+                            curr.map((item) => (item.id === p.id ? { ...item, stock: Number(e.target.value) } : item))
+                          )
+                        }
+                        onBlur={() => updateProduct(p.id, { stock: p.stock })}
+                        style={{ width: 90 }}
+                      />
+                    </td>
+                    <td style={{ borderBottom: "1px solid var(--border)", padding: "12px 14px" }}>
+                      <button
+                        onClick={() => deleteProduct(p.id)}
+                        style={{
+                          padding: "8px 12px",
+                          borderRadius: 8,
+                          border: "1px solid #dc2626",
+                          backgroundColor: "#dc2626",
+                          color: "#fff",
+                          fontWeight: 600,
+                          fontSize: 13,
+                          cursor: "pointer",
+                        }}
+                      >
+                        {t("Apagar")}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* Add product modal */}
+      {formOpen && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            backgroundColor: "rgba(2,6,23,0.45)",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            zIndex: 50,
+          }}
+          onClick={() => setFormOpen(false)}
+        >
+          <div
+            style={{
+              width: "100%",
+              maxWidth: 460,
+              backgroundColor: "var(--bg-card)",
+              border: "1px solid var(--border)",
+              borderRadius: 14,
+              boxShadow: "0 16px 40px rgba(15,23,42,0.18)",
+              padding: 24,
+              display: "grid",
+              gap: 12,
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <h3 style={{ margin: 0, fontSize: 18, color: "var(--text-main)" }}>{t("Adicionar produto")}</h3>
+              <button
+                onClick={() => setFormOpen(false)}
+                style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "var(--text-secondary)" }}
+              >
+                ×
+              </button>
+            </div>
+
+            <form onSubmit={createProduct} style={{ display: "grid", gap: 12 }}>
+              <input value={name} onChange={(e) => setName(e.target.value)} placeholder={t("Nome do produto")} />
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder={t("Descrição")}
+                style={{ minHeight: 80, resize: "vertical" }}
+              />
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                <input value={points} onChange={(e) => setPoints(e.target.value)} type="number" min={0} placeholder={t("Pontos")} />
+                <input value={stock} onChange={(e) => setStock(e.target.value)} type="number" min={0} placeholder={t("Stock")} />
+              </div>
+              <input value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder={t("URL da imagem (opcional)")} />
+              {error && <p style={{ margin: 0, color: "#dc2626", fontSize: 13, fontWeight: 600 }}>{error}</p>}
+              <button
+                type="submit"
+                disabled={submitting}
+                style={{
+                  padding: "10px 16px",
+                  borderRadius: 10,
+                  border: "1px solid #0f766e",
+                  backgroundColor: submitting ? "#5eead4" : "#0f766e",
+                  color: "#fff",
+                  fontWeight: 700,
+                  fontSize: 14,
+                  cursor: submitting ? "not-allowed" : "pointer",
+                }}
+              >
+                {submitting ? t("A guardar...") : t("Adicionar produto")}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

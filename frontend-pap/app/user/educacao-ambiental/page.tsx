@@ -180,12 +180,12 @@ export default function EducacaoAmbientalPage() {
   ];
 
   const categories: Category[] = [
-    { id: "all", label: t("Todos"), icon: "🌍" },
-    { id: "basico", label: t("Básico"), icon: "📚" },
-    { id: "clima", label: t("Clima"), icon: "🌡️" },
-    { id: "energia", label: t("Energia"), icon: "⚡" },
-    { id: "alimentacao", label: t("Alimentação"), icon: "🥗" },
-    { id: "transporte", label: t("Transporte"), icon: "🚲" },
+    { id: "all", label: t("Todos"), icon: "" },
+    { id: "basico", label: t("Básico"), icon: "" },
+    { id: "clima", label: t("Clima"), icon: "" },
+    { id: "energia", label: t("Energia"), icon: "" },
+    { id: "alimentacao", label: t("Alimentação"), icon: "" },
+    { id: "transporte", label: t("Transporte"), icon: "" },
   ];
 
   const filteredArticles = activeCategory === "all"

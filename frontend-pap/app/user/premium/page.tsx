@@ -31,15 +31,16 @@ export default function PremiumPage() {
   const cardStyle: React.CSSProperties = {
     padding: 20,
     borderRadius: 8,
-    backgroundColor: "#fff",
+    backgroundColor: "var(--bg-card)",
     boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
     marginBottom: 20,
+    color: "var(--text-main)",
   };
 
   const premiumCardStyle: React.CSSProperties = {
     ...cardStyle,
     border: "2px solid #22c55e",
-    background: "linear-gradient(135deg, #f0fdf4 0%, #ffffff 100%)",
+    background: "var(--bg-card)",
   };
 
   const featureStyle: React.CSSProperties = {
@@ -211,7 +212,7 @@ export default function PremiumPage() {
           <h1 style={{ margin: "0 0 10px 0", fontSize: 32, color: "#22c55e" }}>
             {t("EcoHint Premium")}
           </h1>
-          <p style={{ margin: 0, fontSize: 18, color: "#666" }}>
+          <p style={{ margin: 0, fontSize: 18, color: "var(--text-secondary)" }}>
             {t("Um único plano simples para acelerar os teus pontos com missões extra e recompensas exclusivas")}
           </p>
         </div>
@@ -240,7 +241,7 @@ export default function PremiumPage() {
           <div style={{ fontSize: 40, fontWeight: "bold", color: "#22c55e", marginBottom: 4 }}>
             €2
           </div>
-          <div style={{ color: "#666", marginBottom: 18 }}>{t("por mês")}</div>
+          <div style={{ color: "var(--text-secondary)", marginBottom: 18 }}>{t("por mês")}</div>
 
           <button
             onClick={() => handleUpgrade(planId)}
@@ -262,7 +263,7 @@ export default function PremiumPage() {
           </button>
 
           {feedback ? (
-            <p style={{ marginTop: 12, fontSize: 14, color: "#475569" }}>{feedback}</p>
+            <p style={{ marginTop: 12, fontSize: 14, color: "var(--text-secondary)" }}>{feedback}</p>
           ) : null}
 
           {premiumStatus === "active" && periodEnd && (

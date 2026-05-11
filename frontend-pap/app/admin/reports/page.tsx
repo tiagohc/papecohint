@@ -78,7 +78,7 @@ export default function ReportsPage() {
   const cardStyle = {
     padding: 20,
     borderRadius: 8,
-    backgroundColor: "#fff",
+    backgroundColor: "var(--bg-card)",
     boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
     marginBottom: 20,
   };

@@ -42,7 +42,7 @@ export default function PartnerHeader() {
     <header
       style={{
         backgroundColor: "#fff",
-        borderBottom: "3px solid #0f766e",
+        borderBottom: "3px solid #22c55e",
         padding: "20px 30px",
         boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
         display: "flex",
@@ -51,26 +51,17 @@ export default function PartnerHeader() {
       }}
     >
       <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-        <div
-          style={{
-            width: 44,
-            height: 44,
-            borderRadius: 14,
-            background: "linear-gradient(135deg, #0f766e, #14b8a6)",
-            display: "grid",
-            placeItems: "center",
-            color: "#fff",
-            fontWeight: 700,
-          }}
-        >
-          P
-        </div>
+        <img
+          src="/logoback.png"
+          alt="EcoHint"
+          style={{ width: 42, height: 42, objectFit: "contain" }}
+        />
         <div>
           <h1 style={{ margin: 0, fontSize: 24, fontWeight: "bold", color: "#1f2937" }}>
             {sectionTitle}
           </h1>
           <p style={{ margin: "5px 0 0 0", fontSize: 12, color: "#666" }}>
-            {user?.name || user?.email || "Parceiro"}
+            {t("Bem-vindo")}, {user?.name || user?.email || ""}
           </p>
         </div>
       </div>
@@ -93,7 +84,7 @@ export default function PartnerHeader() {
           onMouseOver={(e) => (e.currentTarget.style.backgroundColor = "#dc2626")}
           onMouseOut={(e) => (e.currentTarget.style.backgroundColor = "#ef4444")}
         >
-          Logout
+          {t("Logout")}
         </button>
       </div>
     </header>

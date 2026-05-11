@@ -21,28 +21,30 @@ type Reward = {
   stock: number;
 };
 
+type Mission = {
+  id: number;
+  title: string;
+  description?: string;
+  points: number;
+  type: string;
+  verification_type?: string;
+};
+
 export default function UserPage() {
   const { t } = useLanguage();
   const [user, setUser] = useState<User | null>(null);
   const [userPoints, setUserPoints] = useState(0);
   const [missionsCompleted, setMissionsCompleted] = useState(0);
   const [rewards, setRewards] = useState<Reward[]>([]);
+  const [totalRewards, setTotalRewards] = useState(0);
+  const [activeMissions, setActiveMissions] = useState<Mission[]>([]);
+  const [totalMissions, setTotalMissions] = useState(0);
+  const [impact, setImpact] = useState<{ co2_kg: number; energy_kwh: number; water_liters: number } | null>(null);
   const [loading, setLoading] = useState(true);
   const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
   const router = useRouter();
 
   useEffect(() => {
-    const storedPoints = typeof window !== "undefined" ? localStorage.getItem("ecohint-points") : null;
-    if (storedPoints) {
-      setUserPoints(Number(storedPoints));
-    }
-
-    const storedMissionsCompleted =
-      typeof window !== "undefined" ? localStorage.getItem("ecohint-missions-completed") : null;
-    if (storedMissionsCompleted) {
-      setMissionsCompleted(Number(storedMissionsCompleted));
-    }
-
     if (!token) {
       router.push("/");
       return;
@@ -52,16 +54,53 @@ export default function UserPage() {
     fetch("/api/me", {
       headers: { Authorization: `Bearer ${token}` },
     })
-      .then(r => r.json())
-      .then(data => setUser(data))
+      .then(r => { if (!r.ok) throw new Error(`/me: ${r.status}`); return r.json(); })
+      .then(data => {
+        setUser(data);
+        if (typeof data.eco_points === "number") {
+          setUserPoints(data.eco_points);
+          localStorage.setItem("ecohint-points", String(data.eco_points));
+        }
+      })
       .catch(console.error);
 
     // Get rewards
-    fetch("/api/admin/rewards", {
+    fetch("/api/user/rewards", {
       headers: { Authorization: `Bearer ${token}` },
     })
-      .then(r => r.json())
-      .then(data => setRewards(Array.isArray(data) ? data : []))
+      .then(r => { if (!r.ok) throw new Error(`/rewards: ${r.status}`); return r.json(); })
+      .then(data => { const all = Array.isArray(data) ? data : []; setTotalRewards(all.length); setRewards(all.slice(0, 3)); })
+      .catch(console.error);
+
+    // Get impact
+    fetch("/api/user/impact", {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(r => { if (!r.ok) throw new Error(`/impact: ${r.status}`); return r.json(); })
+      .then(data => setImpact(data))
+      .catch(console.error);
+
+    // Get completed missions count from history
+    fetch("/api/user/missions/history", {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(r => { if (!r.ok) throw new Error(`/missions/history: ${r.status}`); return r.json(); })
+      .then(data => {
+        const count = Array.isArray(data) ? data.filter((m: { isCompleted: number }) => m.isCompleted).length : 0;
+        setMissionsCompleted(count);
+      })
+      .catch(console.error);
+
+    // Get active missions
+    fetch("/api/user/missions", {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(r => { if (!r.ok) throw new Error(`/missions: ${r.status}`); return r.json(); })
+      .then(data => {
+        const all = Array.isArray(data) ? data : [];
+        setTotalMissions(all.length);
+        setActiveMissions(all.slice(0, 3));
+      })
       .catch(console.error)
       .finally(() => setLoading(false));
   }, [token, router]);
@@ -91,6 +130,17 @@ export default function UserPage() {
 
   return (
     <div style={{ padding: 40, maxWidth: 1200, margin: "0 auto" }}>
+      {/* Welcome */}
+      {user && (
+        <div style={{ marginBottom: 28 }}>
+          <h2 style={{ margin: 0, fontSize: 26, fontWeight: 700 }}>
+            {t("Olá")}, {user.name || user.email}!
+          </h2>
+          <p style={{ margin: "4px 0 0 0", color: "#6b7280", fontSize: 14 }}>
+            {t("Bem-vindo à tua área pessoal.")}
+          </p>
+        </div>
+      )}
       {/* Stats Grid */}
       <div
         style={{
@@ -133,8 +183,9 @@ export default function UserPage() {
         <div style={cardStyle}>
           <p style={{ margin: 0, color: "#666", fontSize: 12 }}>{t("PEGADA DE CARBONO")}</p>
           <p style={{ margin: "10px 0 0 0", fontSize: 32, fontWeight: "bold", color: "#f59e0b" }}>
-            {carbonSaved.toFixed(1)} kg
+            {(impact?.co2_kg ?? carbonSaved).toFixed(1)} kg
           </p>
+          <p style={{ margin: "4px 0 0 0", fontSize: 11, color: "#9ca3af" }}>{t("CO₂ economizado")}</p>
         </div>
         <div style={cardStyle}>
           <p style={{ margin: 0, color: "#666", fontSize: 12 }}>{t("NÍVEL")}</p>
@@ -147,9 +198,26 @@ export default function UserPage() {
         </div>
       </div>
 
-      {/* Rewards */}
-      <div style={cardStyle}>
-        <h2 style={{ margin: "0 0 20px 0" }}>{t("Rewards Disponíveis")}</h2>
+      {/* Rewards — só mostra se o utilizador já tem pontos */}
+      {userPoints > 0 && <div style={cardStyle}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+          <h2 style={{ margin: 0 }}>{t("Rewards Disponíveis")}</h2>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            {totalRewards > 3 && (
+              <span style={{
+                backgroundColor: "#3b82f6",
+                color: "white",
+                borderRadius: 999,
+                padding: "2px 10px",
+                fontSize: 13,
+                fontWeight: 600,
+              }}>
+                +{totalRewards - 3}
+              </span>
+            )}
+            <button style={buttonStyle} onClick={() => router.push("/user/loja-pontos")}>{t("Ver todas")}</button>
+          </div>
+        </div>
         <div
           style={{
             display: "grid",
@@ -157,7 +225,7 @@ export default function UserPage() {
             gap: 15,
           }}
         >
-          {rewards.slice(0, 6).map(reward => (
+          {rewards.map(reward => (
             <div
               key={reward.id}
               style={{
@@ -172,10 +240,7 @@ export default function UserPage() {
                 {reward.partnerName || t("Sem parceiro")}
               </p>
               <p style={{ margin: "10px 0", fontSize: 24, fontWeight: "bold", color: "#22c55e" }}>
-                {reward.points} pts
-              </p>
-              <p style={{ margin: "5px 0", color: "#666", fontSize: 12 }}>
-                Stock: {reward.stock}
+                {reward.points} EcoPts
               </p>
               <button
                 style={{
@@ -186,26 +251,60 @@ export default function UserPage() {
                   cursor: reward.stock > 0 ? "pointer" : "not-allowed",
                 }}
                 disabled={reward.stock === 0}
+                onClick={() => reward.stock > 0 && router.push("/user/loja-pontos")}
               >
                 {reward.stock > 0 ? t("Redimir") : t("Sem stock")}
               </button>
             </div>
           ))}
         </div>
-      </div>
+      </div>}
 
       {/* Missões */}
       <div style={cardStyle}>
-        <h2 style={{ margin: "0 0 20px 0" }}>{t("Missões Ativas")}</h2>
-        <div style={{ textAlign: "center", padding: 20, backgroundColor: "#f9fafb", borderRadius: 8 }}>
-          <p style={{ color: "#666" }}>{t("Nenhuma missão ativa no momento")}</p>
-          <button 
-            style={buttonStyle}
-            onClick={() => router.push("/user/missions")}
-          >
-            {t("Explorar Missões")}
-          </button>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+          <h2 style={{ margin: 0 }}>{t("Missões Ativas")}</h2>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            {totalMissions > 3 && (
+              <span style={{
+                backgroundColor: "#3b82f6",
+                color: "white",
+                borderRadius: 999,
+                padding: "2px 10px",
+                fontSize: 13,
+                fontWeight: 600,
+              }}>
+                +{totalMissions - 3}
+              </span>
+            )}
+            <button style={buttonStyle} onClick={() => router.push("/user/missions")}>{t("Ver todas")}</button>
+          </div>
         </div>
+        {activeMissions.length === 0 ? (
+          <div style={{ textAlign: "center", padding: 20, backgroundColor: "#f9fafb", borderRadius: 8 }}>
+            <p style={{ color: "#666" }}>{t("Nenhuma missão ativa no momento")}</p>
+            <button style={buttonStyle} onClick={() => router.push("/user/missions")}>{t("Explorar Missões")}</button>
+          </div>
+        ) : (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))", gap: 15 }}>
+            {activeMissions.map(mission => (
+              <div
+                key={mission.id}
+                style={{ padding: 15, border: "1px solid #e5e7eb", borderRadius: 8, backgroundColor: "#f9fafb", cursor: "pointer" }}
+                onClick={() => router.push("/user/missions")}
+              >
+                <h3 style={{ margin: "0 0 5px 0", fontSize: 15 }}>{mission.title}</h3>
+                <p style={{ margin: "0 0 10px 0", color: "#666", fontSize: 12 }}>{mission.description}</p>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ fontSize: 20, fontWeight: "bold", color: "#22c55e" }}>{mission.points} EcoPts</span>
+                  <span style={{ fontSize: 11, color: "#fff", backgroundColor: mission.type === "daily" ? "#3b82f6" : "#8b5cf6", padding: "2px 8px", borderRadius: 12 }}>
+                    {mission.type === "daily" ? t("Diária") : t("Mensal")}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Impacto */}
@@ -221,19 +320,19 @@ export default function UserPage() {
           <div style={{ padding: 15, backgroundColor: "#f0fdf4", borderRadius: 8 }}>
             <p style={{ margin: 0, color: "#666", fontSize: 12 }}>{t("CO2 Economizado")}</p>
             <p style={{ margin: "10px 0 0 0", fontSize: 24, fontWeight: "bold", color: "#22c55e" }}>
-              0 kg
+              {impact ? impact.co2_kg.toFixed(2) : "0"} kg
             </p>
           </div>
           <div style={{ padding: 15, backgroundColor: "#fef3c7", borderRadius: 8 }}>
             <p style={{ margin: 0, color: "#666", fontSize: 12 }}>{t("Árvores Plantadas")}</p>
             <p style={{ margin: "10px 0 0 0", fontSize: 24, fontWeight: "bold", color: "#f59e0b" }}>
-              0
+              {impact ? (impact.energy_kwh > 0 ? (impact.energy_kwh / 10).toFixed(1) : "0") : "0"}
             </p>
           </div>
           <div style={{ padding: 15, backgroundColor: "#dbeafe", borderRadius: 8 }}>
             <p style={{ margin: 0, color: "#666", fontSize: 12 }}>{t("Água Economizada")}</p>
             <p style={{ margin: "10px 0 0 0", fontSize: 24, fontWeight: "bold", color: "#3b82f6" }}>
-              0 L
+              {impact ? impact.water_liters.toFixed(0) : "0"} L
             </p>
           </div>
         </div>

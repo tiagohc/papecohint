@@ -65,7 +65,7 @@ export default function AdminHeader() {
             {sectionTitle}
           </h1>
           <p style={{ margin: "5px 0 0 0", fontSize: 12, color: "#666" }}>
-            {user?.name || "Administrador"}
+            {t("Bem-vindo")}, {user?.name || user?.email || ""}
           </p>
         </div>
       </div>

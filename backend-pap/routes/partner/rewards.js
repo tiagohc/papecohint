@@ -14,7 +14,8 @@ router.get("/", async (req, res) => {
               description,
               cost_points AS points,
               stock,
-              image_url
+              image_url,
+              status
        FROM rewards
        WHERE partner_id = ?
        ORDER BY id DESC`,
@@ -40,8 +41,8 @@ router.post("/", async (req, res) => {
 
   try {
     const [result] = await db.query(
-      `INSERT INTO rewards (partner_id, title, description, cost_points, stock, image_url)
-       VALUES (?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO rewards (partner_id, title, description, cost_points, stock, image_url, status)
+       VALUES (?, ?, ?, ?, ?, ?, 'pending')`,
       [req.user.partner_id, name, description || "", points, stock, image_url || null]
     );
 
@@ -51,7 +52,8 @@ router.post("/", async (req, res) => {
               description,
               cost_points AS points,
               stock,
-              image_url
+              image_url,
+              status
        FROM rewards
        WHERE id = ? AND partner_id = ?`,
       [result.insertId, req.user.partner_id]

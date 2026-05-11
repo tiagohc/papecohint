@@ -60,7 +60,10 @@ async function createEasypayCheckout(req, res) {
     res.json({ manifest });
   } catch (err) {
     console.error("Erro ao criar checkout EasyPay:", err.response?.data || err.message);
-    res.status(500).json({ error: "Erro ao criar checkout EasyPay" });
+    if (err.message && err.message.includes("EASYPAY_ACCOUNT_ID")) {
+      return res.status(503).json({ error: "Pagamentos não disponíveis de momento. Tenta mais tarde." });
+    }
+    res.status(500).json({ error: "Erro ao criar checkout. Tenta novamente." });
   }
 }
 

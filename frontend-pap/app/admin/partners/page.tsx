@@ -3,9 +3,10 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useLanguage } from "@/app/components/LanguageProvider";
 import {
-  adminFormCardStyle,
-  adminFormRowStyle,
+  adminFormGridStyle,
   adminInputStyle,
+  adminModalBackdropStyle,
+  adminModalCardStyle,
 } from "../components/formStyles";
 import {
   adminActionDangerButtonStyle,
@@ -33,6 +34,7 @@ export default function PartnersPage() {
   const { t } = useLanguage();
   const [partners, setPartners] = useState<Partner[]>([]);
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
+  const [modalOpen, setModalOpen] = useState(false);
   const [newPartnerName, setNewPartnerName] = useState("");
   const [newPartnerDescription, setNewPartnerDescription] = useState("");
   const [accountName, setAccountName] = useState("");
@@ -90,6 +92,7 @@ export default function PartnersPage() {
     setAccountName("");
     setAccountEmail("");
     setAccountPassword("");
+    setModalOpen(false);
     fetchPartners();
   };
 
@@ -131,15 +134,15 @@ export default function PartnersPage() {
   return (
     <div style={{ padding: 40 }}>
       <h1>{t("Parceiros")}</h1>
-      <div style={{ marginBottom: 16, display: "flex", gap: 8 }}>
+      <div style={{ marginBottom: 16, display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
         <button
           onClick={() => setStatusFilter("all")}
           style={{
             padding: "8px 12px",
             borderRadius: 6,
-            border: "1px solid #d1d5db",
-            backgroundColor: statusFilter === "all" ? "#1f2937" : "#fff",
-            color: statusFilter === "all" ? "#fff" : "#111827",
+            border: "1px solid var(--border)",
+            backgroundColor: statusFilter === "all" ? "#1f2937" : "var(--bg-card)",
+            color: statusFilter === "all" ? "#fff" : "var(--text-main)",
             cursor: "pointer",
           }}
         >
@@ -150,9 +153,9 @@ export default function PartnersPage() {
           style={{
             padding: "8px 12px",
             borderRadius: 6,
-            border: "1px solid #d1d5db",
-            backgroundColor: statusFilter === "active" ? "#166534" : "#fff",
-            color: statusFilter === "active" ? "#fff" : "#111827",
+            border: "1px solid var(--border)",
+            backgroundColor: statusFilter === "active" ? "#166534" : "var(--bg-card)",
+            color: statusFilter === "active" ? "#fff" : "var(--text-main)",
             cursor: "pointer",
           }}
         >
@@ -163,56 +166,20 @@ export default function PartnersPage() {
           style={{
             padding: "8px 12px",
             borderRadius: 6,
-            border: "1px solid #d1d5db",
-            backgroundColor: statusFilter === "inactive" ? "#991b1b" : "#fff",
-            color: statusFilter === "inactive" ? "#fff" : "#111827",
+            border: "1px solid var(--border)",
+            backgroundColor: statusFilter === "inactive" ? "#991b1b" : "var(--bg-card)",
+            color: statusFilter === "inactive" ? "#fff" : "var(--text-main)",
             cursor: "pointer",
           }}
         >
           {t("Só sem acesso")}
         </button>
-      </div>
-      <div style={{ ...adminFormCardStyle, marginBottom: 20 }}>
-        <div style={adminFormRowStyle}>
-        <input
-          type="text"
-          placeholder={t("Nome do Parceiro")}
-          value={newPartnerName}
-          onChange={(e) => setNewPartnerName(e.target.value)}
-          style={adminInputStyle}
-        />
-        <input
-          type="text"
-          placeholder={t("Descrição (opcional)")}
-          value={newPartnerDescription}
-          onChange={(e) => setNewPartnerDescription(e.target.value)}
-          style={adminInputStyle}
-        />
-        <input
-          type="text"
-          placeholder={t("Nome da Conta (opcional)")}
-          value={accountName}
-          onChange={(e) => setAccountName(e.target.value)}
-          style={adminInputStyle}
-        />
-        <input
-          type="email"
-          placeholder={t("Email da Conta *")}
-          value={accountEmail}
-          onChange={(e) => setAccountEmail(e.target.value)}
-          required
-          style={adminInputStyle}
-        />
-        <input
-          type="password"
-          placeholder={t("Password da Conta *")}
-          value={accountPassword}
-          onChange={(e) => setAccountPassword(e.target.value)}
-          required
-          style={adminInputStyle}
-        />
-        <button onClick={handleAddPartner} style={adminTopActionButtonStyle}>{t("Adicionar Parceiro")}</button>
-        </div>
+        <button
+          onClick={() => setModalOpen(true)}
+          style={adminTopActionButtonStyle}
+        >
+          {t("Novo Parceiro")}
+        </button>
       </div>
       <div style={adminTableContainerStyle}>
         <table style={adminTableStyle}>
@@ -263,6 +230,61 @@ export default function PartnersPage() {
           </tbody>
         </table>
       </div>
+      {modalOpen && (
+        <div style={adminModalBackdropStyle}>
+          <div style={{ ...adminModalCardStyle, maxWidth: 480 }}>
+            <h2 style={{ margin: 0, marginBottom: 8, fontSize: 18 }}>{t("Novo Parceiro")}</h2>
+            <div style={adminFormGridStyle}>
+              <input
+                type="text"
+                placeholder={t("Nome do Parceiro")}
+                value={newPartnerName}
+                onChange={(e) => setNewPartnerName(e.target.value)}
+                style={adminInputStyle}
+              />
+              <input
+                type="text"
+                placeholder={t("Descrição (opcional)")}
+                value={newPartnerDescription}
+                onChange={(e) => setNewPartnerDescription(e.target.value)}
+                style={adminInputStyle}
+              />
+              <input
+                type="text"
+                placeholder={t("Nome da Conta (opcional)")}
+                value={accountName}
+                onChange={(e) => setAccountName(e.target.value)}
+                style={adminInputStyle}
+              />
+              <input
+                type="email"
+                placeholder={t("Email da Conta *")}
+                value={accountEmail}
+                onChange={(e) => setAccountEmail(e.target.value)}
+                required
+                style={adminInputStyle}
+              />
+              <input
+                type="password"
+                placeholder={t("Password da Conta *")}
+                value={accountPassword}
+                onChange={(e) => setAccountPassword(e.target.value)}
+                required
+                style={adminInputStyle}
+              />
+              <div style={{ display: "flex", gap: 8 }}>
+                <button onClick={handleAddPartner} style={adminTopActionButtonStyle}>{t("Adicionar Parceiro")}</button>
+                <button
+                  onClick={() => setModalOpen(false)}
+                  style={{ padding: "10px 16px", borderRadius: 10, border: "1px solid var(--border)", backgroundColor: "var(--bg-card)", color: "var(--text-main)", cursor: "pointer" }}
+                >
+                  {t("Cancelar")}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -6,19 +6,18 @@ import { usePathname } from "next/navigation";
 type MenuItem = {
   label: string;
   href: string;
-  icon: string;
 };
 
 const menuUser: MenuItem[] = [
-  { label: "Tela Inicial", href: "/dashboard", icon: "🏠" },
-  { label: "Meu Impacto", href: "/dashboard/user/impacto", icon: "📊" },
-  { label: "Missões", href: "/dashboard/user/missoes", icon: "🎯" },
+  { label: "Tela Inicial", href: "/dashboard" },
+  { label: "Meu Impacto", href: "/dashboard/user/impacto" },
+  { label: "Missões", href: "/dashboard/user/missoes" },
 ];
 
 const menuAdmin: MenuItem[] = [
-  { label: "Utilizadores", href: "/dashboard/admin/users", icon: "👥" },
-  { label: "Missões", href: "/dashboard/admin/missoes", icon: "🎯" },
-  { label: "Estatísticas", href: "/dashboard/admin/estatisticas", icon: "📈" },
+  { label: "Utilizadores", href: "/dashboard/admin/users" },
+  { label: "Missões", href: "/dashboard/admin/missoes" },
+  { label: "Estatísticas", href: "/dashboard/admin/estatisticas" },
 ];
 
 export default function Sidebar() {
@@ -38,7 +37,6 @@ export default function Sidebar() {
             href={item.href}
             className={`item ${pathname === item.href ? "active" : ""}`}
           >
-            <span>{item.icon}</span>
             {item.label}
           </Link>
         ))}
@@ -52,7 +50,6 @@ export default function Sidebar() {
             href={item.href}
             className={`item ${pathname === item.href ? "active" : ""}`}
           >
-            <span>{item.icon}</span>
             {item.label}
           </Link>
         ))}

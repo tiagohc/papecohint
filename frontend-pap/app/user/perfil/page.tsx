@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { getLevelFromPoints, carbonSavedFromPoints } from "@/lib/progress";
 import { useLanguage } from "@/app/components/LanguageProvider";
 
 interface UserProfile {
@@ -16,102 +15,72 @@ interface UserProfile {
 export default function PerfilPage() {
   const { t } = useLanguage();
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-  const [userPoints, setUserPoints] = useState(0);
   const [isEditing, setIsEditing] = useState(false);
-  const [editForm, setEditForm] = useState({ name: "", email: "" });
+  const [editForm, setEditForm] = useState({ name: "" });
   const [isLoading, setIsLoading] = useState(false);
 
+  // Token lido uma vez no mount — não muda durante a sessão
+  const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+
   useEffect(() => {
-    // Carregar dados do usuário do localStorage (simulando dados do backend)
-    const storedUser = localStorage.getItem("ecohint-user");
-    const storedPoints = localStorage.getItem("ecohint-points");
+    if (!token) return;
 
-    if (storedUser) {
-      const userData = JSON.parse(storedUser);
-      setUserProfile({
-        id: userData.id || 1,
-        name: userData.name || "Usuário EcoHint",
-        email: userData.email || "usuario@ecohint.com",
-        role: userData.role || "user",
-        status: userData.status || "active",
-        avatar: userData.avatar || null,
-      });
-      setEditForm({
-        name: userData.name || "Usuário EcoHint",
-        email: userData.email || "usuario@ecohint.com",
-      });
-    } else {
-      // Dados padrão se não houver no localStorage
-      setUserProfile({
-        id: 1,
-        name: "Usuário EcoHint",
-        email: "usuario@ecohint.com",
-        role: "user",
-        status: "active",
-        avatar: undefined,
-      });
-      setEditForm({
-        name: "Usuário EcoHint",
-        email: "usuario@ecohint.com",
-      });
-    }
-
-    setUserPoints(storedPoints ? Number(storedPoints) : 0);
+    fetch("/api/user/profile", {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((r) => r.json())
+      .then((data) => {
+        setUserProfile({
+          id: data.id,
+          name: data.name || "",
+          email: data.email || "",
+          role: data.role || "user",
+          status: data.status || "active",
+          avatar: data.avatar_url || undefined,
+        });
+        setEditForm({ name: data.name || "" });
+      })
+      .catch(console.error);
   }, []);
 
-  const userLevel = getLevelFromPoints(userPoints);
-  const userCarbon = carbonSavedFromPoints(userPoints);
-
-  const handleAvatarChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  // Envia a imagem para a API, guarda no servidor e actualiza o estado local
+  const handleAvatarChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const avatarUrl = e.target?.result as string;
-        setUserProfile(prev => prev ? { ...prev, avatar: avatarUrl } : null);
+    if (!file || !token) return;
 
-        // Salvar no localStorage
-        const storedUser = localStorage.getItem("ecohint-user");
-        if (storedUser) {
-          const userData = JSON.parse(storedUser);
-          userData.avatar = avatarUrl;
-          localStorage.setItem("ecohint-user", JSON.stringify(userData));
-        } else {
-          localStorage.setItem("ecohint-user", JSON.stringify({
-            id: 1,
-            name: "Usuário EcoHint",
-            email: "usuario@ecohint.com",
-            role: "user",
-            status: "active",
-            avatar: avatarUrl,
-          }));
-        }
-      };
-      reader.readAsDataURL(file);
+    const formData = new FormData();
+    formData.append("avatar", file);
+
+    try {
+      const res = await fetch("/api/user/profile/avatar", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+      if (!res.ok) throw new Error("Erro ao enviar avatar");
+      const data = await res.json();
+      setUserProfile(prev => prev ? { ...prev, avatar: data.avatar_url } : null);
+      // Avisa o header para actualizar o avatar
+      window.dispatchEvent(new Event("profile-updated"));
+    } catch (err) {
+      console.error("Erro ao actualizar avatar:", err);
     }
   };
 
+  // Guarda o nome actualizado via API e notifica o header
   const handleSaveProfile = async () => {
+    if (!token) return;
     setIsLoading(true);
     try {
-      // Simular chamada para API
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      setUserProfile(prev => prev ? {
-        ...prev,
-        name: editForm.name,
-        email: editForm.email,
-      } : null);
-
-      // Salvar no localStorage
-      const storedUser = localStorage.getItem("ecohint-user");
-      if (storedUser) {
-        const userData = JSON.parse(storedUser);
-        userData.name = editForm.name;
-        userData.email = editForm.email;
-        localStorage.setItem("ecohint-user", JSON.stringify(userData));
-      }
-
+      const res = await fetch("/api/user/profile", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ name: editForm.name }),
+      });
+      if (!res.ok) throw new Error("Erro ao guardar");
+      const updated = await res.json();
+      setUserProfile(prev => prev ? { ...prev, name: updated.name } : null);
+      window.dispatchEvent(new Event("profile-updated"));
       setIsEditing(false);
     } catch (error) {
       console.error("Erro ao salvar perfil:", error);
@@ -126,12 +95,6 @@ export default function PerfilPage() {
     backgroundColor: "#fff",
     boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
     marginBottom: 20,
-  };
-
-  const statCardStyle: React.CSSProperties = {
-    ...cardStyle,
-    textAlign: "center",
-    flex: 1,
   };
 
   if (!userProfile) {
@@ -176,7 +139,7 @@ export default function PerfilPage() {
                   }}
                 />
               ) : (
-                <span>👤</span>
+                <span style={{ fontSize: 32, color: "var(--text-secondary)" }}>&#9786;</span>
               )}
             </div>
 
@@ -200,7 +163,7 @@ export default function PerfilPage() {
               }}
               title={t("Alterar foto de perfil")}
             >
-              📷
+              +
             </label>
             <input
               id="avatar-input"
@@ -220,13 +183,13 @@ export default function PerfilPage() {
                 style={{
                   padding: "4px 12px",
                   borderRadius: 20,
-                  backgroundColor: userProfile.status === "active" ? "#dcfce7" : "#fee2e2",
-                  color: userProfile.status === "active" ? "#166534" : "#991b1b",
+                  backgroundColor: "#dcfce7",
+                  color: "#166534",
                   fontSize: 12,
                   fontWeight: "bold",
                 }}
               >
-                {userProfile.status === "active" ? t("Ativo") : t("Inativo")}
+                {t("Online")}
               </span>
               <span
                 style={{
@@ -283,24 +246,6 @@ export default function PerfilPage() {
               />
             </div>
 
-            <div>
-              <label style={{ display: "block", marginBottom: 4, fontWeight: "bold" }}>
-                {t("Email")}
-              </label>
-              <input
-                type="email"
-                value={editForm.email}
-                onChange={(e) => setEditForm(prev => ({ ...prev, email: e.target.value }))}
-                style={{
-                  width: "100%",
-                  padding: "8px 12px",
-                  borderRadius: 6,
-                  border: "1px solid #e5e7eb",
-                  fontSize: 14,
-                }}
-              />
-            </div>
-
             <div style={{ display: "flex", gap: 12 }}>
               <button
                 onClick={handleSaveProfile}
@@ -322,105 +267,48 @@ export default function PerfilPage() {
         </div>
       )}
 
-      {/* Estatísticas */}
-      <div style={{ display: "flex", gap: 20, marginBottom: 20 }}>
-        <div style={statCardStyle}>
-          <div style={{ fontSize: 32, fontWeight: 700, color: "#22c55e", marginBottom: 8 }}>
-            {userPoints.toLocaleString()}
-          </div>
-          <div style={{ color: "#666", fontSize: 14 }}>{t("Pontos Totais")}</div>
-        </div>
-
-        <div style={statCardStyle}>
-          <div style={{ fontSize: 32, fontWeight: 700, color: "#f59e0b", marginBottom: 8 }}>
-            {userLevel.level}
-          </div>
-          <div style={{ color: "#666", fontSize: 14 }}>{t("Nível Atual")}</div>
-        </div>
-
-        <div style={statCardStyle}>
-          <div style={{ fontSize: 32, fontWeight: 700, color: "#3b82f6", marginBottom: 8 }}>
-            {Math.round(userCarbon)}
-          </div>
-          <div style={{ color: "#666", fontSize: 14 }}>{t("kg CO₂ Economizados")}</div>
-        </div>
-      </div>
-
-      {/* Progresso para Próximo Nível */}
+      {/* Sobre a EcoHint */}
       <div style={cardStyle}>
-        <h2 style={{ margin: "0 0 16px 0" }}>{t("Progresso para Nível")} {userLevel.level + 1}</h2>
-        <div style={{ marginBottom: 8 }}>
-          <div style={{
-            width: "100%",
-            height: 12,
-            backgroundColor: "#e5e7eb",
-            borderRadius: 6,
-            overflow: "hidden",
-          }}>
-            <div
-              style={{
-                width: `${userLevel.progress}%`,
-                height: "100%",
-                backgroundColor: "#22c55e",
-                transition: "width 0.3s ease",
-              }}
-            />
-          </div>
-        </div>
-        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14, color: "#666" }}>
-          <span>{userPoints} / {userLevel.pointsToNextLevel} {t("pontos")}</span>
-          <span>{Math.round(userLevel.progress * 100)}% {t("completo")}</span>
-        </div>
+        <h2 style={{ margin: "0 0 16px 0", color: "#22c55e" }}>🌱 {t("O que é a EcoHint?")}</h2>
+        <p style={{ margin: "0 0 12px 0", color: "#374151", lineHeight: 1.7 }}>
+          {t("A EcoHint é uma plataforma que te recompensa por adotares comportamentos sustentáveis no dia a dia. Completa missões ecológicas, ganha EcoPts e troca-os por produtos e descontos dos nossos parceiros.")}
+        </p>
       </div>
 
-      {/* Conquistas Recentes */}
+      {/* Como funciona */}
       <div style={cardStyle}>
-        <h2 style={{ margin: "0 0 16px 0" }}>{t("Conquistas Recentes")}</h2>
-        {userPoints > 0 ? (
-          <div style={{ display: "grid", gap: 12, gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))" }}>
-            {userPoints >= 50 && (
-              <div style={{
-                padding: 16,
-                border: "1px solid #e5e7eb",
-                borderRadius: 8,
-                backgroundColor: "#f9fafb",
-              }}>
-                <div style={{ fontSize: 24, marginBottom: 8 }}></div>
-                <h4 style={{ margin: "0 0 4px 0", fontSize: 16 }}>{t("Primeira Missão")}</h4>
-                <p style={{ margin: 0, fontSize: 14, color: "#666" }}>{t("Completou sua primeira missão sustentável")}</p>
+        <h2 style={{ margin: "0 0 16px 0" }}>📋 {t("Como funciona")}</h2>
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          {[
+            { icon: "✅", title: t("Completa Missões"), desc: t("Usa transportes públicos, recicla, poupa energia e outras ações sustentáveis. Cada missão tem pontuação própria.") },
+            { icon: "🏆", title: t("Ganha EcoPts"), desc: t("Cada missão concluída e validada adiciona EcoPts à tua conta. Quanto mais missões, mais pontos.") },
+            { icon: "🛒", title: t("Resgata Recompensas"), desc: t("Vai à Loja de Pontos e troca os teus EcoPts por produtos reais dos parceiros EcoHint.") },
+            { icon: "📊", title: t("Acompanha o teu Impacto"), desc: t("Na secção Impacto Ambiental podes ver o CO₂ que poupaste, as viagens de autocarro e muito mais.") },
+          ].map((item, i) => (
+            <div key={i} style={{ display: "flex", gap: 14, alignItems: "flex-start", padding: "12px 14px", backgroundColor: "#f9fafb", borderRadius: 8 }}>
+              <span style={{ fontSize: 22, lineHeight: 1 }}>{item.icon}</span>
+              <div>
+                <p style={{ margin: "0 0 4px 0", fontWeight: 600, color: "#1f2937" }}>{item.title}</p>
+                <p style={{ margin: 0, fontSize: 13, color: "#6b7280", lineHeight: 1.5 }}>{item.desc}</p>
               </div>
-            )}
-
-            {userPoints >= 100 && (
-              <div style={{
-                padding: 16,
-                border: "1px solid #e5e7eb",
-                borderRadius: 8,
-                backgroundColor: "#f9fafb",
-              }}>
-                <div style={{ fontSize: 24, marginBottom: 8 }}></div>
-                <h4 style={{ margin: "0 0 4px 0", fontSize: 16 }}>{t("Eco Warrior")}</h4>
-                <p style={{ margin: 0, fontSize: 14, color: "#666" }}>{t("Economizou mais de 100kg de CO₂")}</p>
-              </div>
-            )}
-
-            {userPoints > 0 && (
-              <div style={{
-                padding: 16,
-                border: "1px solid #e5e7eb",
-                borderRadius: 8,
-                backgroundColor: "#f9fafb",
-              }}>
-                <div style={{ fontSize: 24, marginBottom: 8 }}></div>
-                <h4 style={{ margin: "0 0 4px 0", fontSize: 16 }}>{t("Nível")} {userLevel.level}</h4>
-                <p style={{ margin: 0, fontSize: 14, color: "#666" }}>{t("Alcançou o nível")} {userLevel.level} {t("no EcoHint")}</p>
-              </div>
-            )}
-          </div>
-        ) : (
-          <p style={{ color: "#666" }}>{t("Sem conquistas ainda. Complete sua primeira missão para conquistar troféus.")}</p>
-        )}
+            </div>
+          ))}
+        </div>
       </div>
+
+      {/* Regras */}
+      <div style={cardStyle}>
+        <h2 style={{ margin: "0 0 16px 0" }}>📌 {t("Regras e Notas")}</h2>
+        <ul style={{ margin: 0, paddingLeft: 20, color: "#374151", lineHeight: 2, fontSize: 14 }}>
+          <li>{t("Cada missão só pode ser submetida uma vez por período (diária ou mensal).")}</li>
+          <li>{t("As submissões de foto ou bilhete são verificadas manualmente por um administrador.")}</li>
+          <li>{t("Os EcoPts não têm prazo de validade enquanto a conta estiver ativa.")}</li>
+          <li>{t("Ao resgatar uma recompensa, os pontos são descontados imediatamente.")}</li>
+          <li>{t("O stock das recompensas é limitado — resgata antes que esgote!")}</li>
+          <li>{t("Em caso de dúvidas, contacta o suporte através da secção de notificações.")}</li>
+        </ul>
+      </div>
+
     </div>
   );
 }

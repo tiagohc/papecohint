@@ -8,7 +8,8 @@
     "dev": "nodemon index.js",
     "db:missions-setup": "node create_missions_support_tables.js",
     "db:partners-setup": "node create_partner_users_table.js",
-    "db:premium-setup": "node create_premium_tables.js"
+    "db:premium-setup": "node create_premium_tables.js",
+    "db:energy-invoices-setup": "node run_energy_invoices_migration.js"
   },
   "keywords": [],
   "author": "",
@@ -21,9 +22,14 @@
     "express": "^5.2.1",
     "firebase-admin": "^13.7.0",
     "jsonwebtoken": "^9.0.3",
+    "multer": "^2.1.1",
     "mysql2": "^3.16.0",
     "nodemailer": "^7.0.13",
-    "stripe": "^18.1.1"
+    "openai": "^6.36.0",
+    "pdf-parse": "^2.4.5",
+    "sharp": "^0.34.5",
+    "stripe": "^18.1.1",
+    "tesseract.js": "^7.0.0"
   },
   "devDependencies": {
     "nodemon": "^3.1.11"

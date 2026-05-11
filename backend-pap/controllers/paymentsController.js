@@ -7,6 +7,7 @@ const {
   findUserByEmail,
 } = require("../models/user/premiumModel");
 
+// Stripe envia timestamps Unix (segundos); MySQL espera DATETIME no formato 'YYYY-MM-DD HH:MM:SS'
 function unixToMysqlDate(unix) {
   if (!unix) return null;
   const date = new Date(unix * 1000);
@@ -21,6 +22,8 @@ async function handleStripeWebhook(req, res) {
     return res.status(500).json({ error: "STRIPE_WEBHOOK_SECRET não configurada" });
   }
 
+  // Verifica a assinatura do Stripe para garantir que o webhook é legítimo.
+  // IMPORTANTE: o body tem de chegar raw (não parseado) — configurado no index.js.
   let event;
   try {
     const stripe = getStripeClient();

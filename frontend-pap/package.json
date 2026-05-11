@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "chart.js": "^4.5.1",
     "fast-glob": "^3.3.3",
     "firebase": "^12.11.0",
     "i18next": "^25.10.10",

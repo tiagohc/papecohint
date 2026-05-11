@@ -27,37 +27,34 @@ async function getAvailableRewards(req, res) {
 // RESGATAR RECOMPENSA
 async function redeemReward(req, res) {
   try {
-    const { rewardId } = req.body;
+    const { rewardId, full_name, address, city, postal_code, phone, notes } = req.body;
     const userId = req.user.id;
 
     if (!rewardId) return res.status(400).json({ error: "ID da recompensa é obrigatório" });
-
-    // Obter informações da recompensa
-    const reward = await getRewardById(rewardId);
-
-    if (!reward) return res.status(404).json({ error: "Recompensa não encontrada" });
-
-    // Verificar pontos do usuário
-    const userPoints = await getPointsFromDB(userId);
-
-    if (userPoints < reward.points_required) {
-      return res.status(400).json({ error: "Pontos insuficientes" });
+    if (!full_name || !address || !city || !postal_code) {
+      return res.status(400).json({ error: "Morada de entrega incompleta. Preenche nome, morada, cidade e código postal." });
     }
 
-    // Deduzir pontos do usuário
-    await deductPoints(userId, reward.points_required);
+    const reward = await getRewardById(rewardId);
+    if (!reward) return res.status(404).json({ error: "Recompensa não encontrada" });
+    if (reward.stock <= 0) return res.status(400).json({ error: "Esta recompensa está esgotada." });
 
-    // Registrar resgate
-    await recordRedemption(userId, rewardId, reward.points_required);
+    const userPoints = await getPointsFromDB(userId);
+    if (userPoints < reward.points_required) {
+      return res.status(400).json({ error: `Pontos insuficientes. Precisas de ${reward.points_required} pts e tens ${userPoints} pts.` });
+    }
+
+    await deductPoints(userId, reward.points_required);
+    await recordRedemption(userId, rewardId, reward.points_required, { full_name, address, city, postal_code, phone, notes });
 
     res.json({ 
-      message: "Recompensa resgatada com sucesso",
+      message: "Recompensa resgatada com sucesso! Receberás o produto na morada indicada.",
       reward_name: reward.name,
       points_used: reward.points_required
     });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Erro ao resgatar recompensa" });
+    console.error("[redeem] ERRO:", err.message, err.sql || "");
+    res.status(500).json({ error: "Erro ao resgatar recompensa: " + err.message });
   }
 }
 

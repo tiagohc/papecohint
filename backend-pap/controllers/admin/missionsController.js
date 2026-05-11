@@ -10,7 +10,7 @@ function isMissingTableError(err, tableName) {
 async function getMissions(req, res) {
   try {
     const [missions] = await db.query(
-      `SELECT id, title, description, type, access, reward_points AS points, active, created_at
+      `SELECT id, title, description, type, access, reward_points AS points, active, verification_type, target_kwh, created_at
        FROM missions
        ORDER BY created_at DESC`
     );
@@ -28,7 +28,7 @@ async function getMission(req, res) {
   const { id } = req.params;
   try {
     const [rows] = await db.query(
-      "SELECT id, title, description, type, access, reward_points AS points, active, created_at FROM missions WHERE id = ?",
+      "SELECT id, title, description, type, access, reward_points AS points, active, verification_type, target_kwh, created_at FROM missions WHERE id = ?",
       [id]
     );
     if (rows.length === 0) return res.status(404).json({ error: "Missão não encontrada" });
@@ -43,23 +43,27 @@ async function getMission(req, res) {
 // CRIAR MISSÃO
 // ============================
 async function createMission(req, res) {
-  const { title, description, type, points, access } = req.body;
+  const { title, description, type, points, access, verification_type, target_kwh } = req.body;
 
   if (!title || !points) {
     return res.status(400).json({ error: "Título e pontos são obrigatórios" });
   }
 
   const missionAccess = access === "premium" ? "premium" : "free";
+  const verType = ["photo", "invoice_kwh_below", "invoice_kwh_reduce", "transport_ticket"].includes(verification_type)
+    ? verification_type
+    : "photo";
+  const targetKwh = verType === "invoice_kwh_below" && target_kwh ? Number(target_kwh) : null;
 
   try {
     const [result] = await db.query(
-      `INSERT INTO missions (title, description, type, reward_points, access, active)
-       VALUES (?, ?, ?, ?, ?, 1)`,
-      [title, description || "", type || "daily", Number(points), missionAccess]
+      `INSERT INTO missions (title, description, type, reward_points, access, active, verification_type, target_kwh)
+       VALUES (?, ?, ?, ?, ?, 1, ?, ?)`,
+      [title, description || "", type || "daily", Number(points), missionAccess, verType, targetKwh]
     );
 
     const [rows] = await db.query(
-      "SELECT id, title, description, type, access, reward_points AS points, active, created_at FROM missions WHERE id = ?",
+      "SELECT id, title, description, type, access, reward_points AS points, active, verification_type, target_kwh, created_at FROM missions WHERE id = ?",
       [result.insertId]
     );
 
@@ -75,17 +79,19 @@ async function createMission(req, res) {
 // ============================
 async function updateMission(req, res) {
   const { id } = req.params;
-  const { title, description, type, points, active, access } = req.body;
+  const { title, description, type, points, active, access, verification_type, target_kwh } = req.body;
 
   const setClauses = [];
   const values = [];
 
-  if (title !== undefined)       { setClauses.push("title = ?");          values.push(title); }
-  if (description !== undefined) { setClauses.push("description = ?");    values.push(description); }
-  if (type !== undefined)        { setClauses.push("type = ?");            values.push(type); }
-  if (points !== undefined)      { setClauses.push("reward_points = ?");   values.push(Number(points)); }
-  if (active !== undefined)      { setClauses.push("active = ?");          values.push(active ? 1 : 0); }
-  if (access !== undefined)      { setClauses.push("access = ?");          values.push(access === "premium" ? "premium" : "free"); }
+  if (title !== undefined)             { setClauses.push("title = ?");              values.push(title); }
+  if (description !== undefined)       { setClauses.push("description = ?");        values.push(description); }
+  if (type !== undefined)              { setClauses.push("type = ?");               values.push(type); }
+  if (points !== undefined)            { setClauses.push("reward_points = ?");      values.push(Number(points)); }
+  if (active !== undefined)            { setClauses.push("active = ?");             values.push(active ? 1 : 0); }
+  if (access !== undefined)            { setClauses.push("access = ?");             values.push(access === "premium" ? "premium" : "free"); }
+  if (verification_type !== undefined) { setClauses.push("verification_type = ?"); values.push(verification_type); }
+  if (target_kwh !== undefined)        { setClauses.push("target_kwh = ?");        values.push(target_kwh !== null ? Number(target_kwh) : null); }
 
   if (setClauses.length === 0) {
     return res.status(400).json({ error: "Nenhum campo para atualizar" });
@@ -102,7 +108,7 @@ async function updateMission(req, res) {
     if (result.affectedRows === 0) return res.status(404).json({ error: "Missão não encontrada" });
 
     const [rows] = await db.query(
-      "SELECT id, title, description, type, access, reward_points AS points, active, created_at FROM missions WHERE id = ?",
+      "SELECT id, title, description, type, access, reward_points AS points, active, verification_type, target_kwh, created_at FROM missions WHERE id = ?",
       [id]
     );
 
@@ -273,6 +279,126 @@ async function verifyMission(req, res) {
   }
 }
 
+// ============================
+// ADMIN: LISTAR TODAS AS CONCLUSÕES (histórico completo)
+// ============================
+async function getAllCompletions(req, res) {
+  try {
+    const [rows] = await db.query(
+      `SELECT um.id, um.user_id, IFNULL(u.name, u.email) AS user_name, u.email,
+              m.id AS mission_id, m.title, m.reward_points AS points, IFNULL(m.verification_type, 'photo') AS verification_type,
+              um.photo_url, um.verified, um.redeemed, um.completed_at
+       FROM user_missions um
+       JOIN users u ON um.user_id = u.id
+       JOIN missions m ON um.mission_id = m.id
+       ORDER BY um.completed_at DESC`
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error('[admin/completions]', err);
+    if (isMissingTableError(err, 'user_missions')) return res.json([]);
+    res.status(500).json({ error: 'Erro ao buscar histórico de conclusões' });
+  }
+}
+
+// ============================
+// ADMIN: RESET DE CONCLUSÃO (permite ao utilizador repetir a missão)
+// ============================
+async function resetCompletion(req, res) {
+  const { completionId } = req.params;
+  try {
+    // Revert the points that were added when the mission was completed
+    const [rows] = await db.query(
+      `SELECT um.user_id, m.reward_points AS points
+       FROM user_missions um
+       JOIN missions m ON um.mission_id = m.id
+       WHERE um.id = ?`,
+      [completionId]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ error: "Conclusão não encontrada" });
+    }
+
+    const { user_id, points } = rows[0];
+
+    // Remove the user_missions record
+    await db.query("DELETE FROM user_missions WHERE id = ?", [completionId]);
+
+    // Revert eco_points (only if points > 0)
+    if (points > 0) {
+      await db.query(
+        "UPDATE users SET eco_points = GREATEST(0, eco_points - ?) WHERE id = ?",
+        [points, user_id]
+      );
+    }
+
+    res.json({ message: "Conclusão removida. O utilizador pode repetir a missão." });
+  } catch (err) {
+    console.error(err);
+    if (isMissingTableError(err, "user_missions")) {
+      return res.status(503).json({ error: "Tabela user_missions não existe." });
+    }
+    res.status(500).json({ error: "Erro ao fazer reset da missão" });
+  }
+}
+
+// ============================
+// LISTAR MISSÕES EXPIRADAS (para o admin ver histórico)
+// ============================
+async function getExpiredMissions(req, res) {
+  try {
+    const [rows] = await db.query(
+      `SELECT id, title, description, type, access, reward_points AS points,
+              verification_type, target_kwh, created_at,
+              CASE
+                WHEN type = 'daily'   THEN DATE_ADD(created_at, INTERVAL 1 DAY)
+                WHEN type = 'monthly' THEN DATE_ADD(created_at, INTERVAL 1 MONTH)
+                ELSE NULL
+              END AS expires_at
+       FROM missions
+       WHERE NOT (
+         (type = 'daily'   AND NOW() <= DATE_ADD(created_at, INTERVAL 1 DAY))
+         OR (type = 'monthly' AND NOW() <= DATE_ADD(created_at, INTERVAL 1 MONTH))
+       )
+       ORDER BY created_at DESC
+       LIMIT 100`
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Erro ao listar missões expiradas" });
+  }
+}
+
+// ============================
+// DUPLICAR MISSÃO (nova cópia com created_at = NOW)
+// ============================
+async function duplicateMission(req, res) {
+  const { id } = req.params;
+  try {
+    const [rows] = await db.query(
+      "SELECT title, description, type, reward_points, access, verification_type, target_kwh FROM missions WHERE id = ?",
+      [id]
+    );
+    if (rows.length === 0) return res.status(404).json({ error: "Missão não encontrada" });
+    const m = rows[0];
+    const [result] = await db.query(
+      `INSERT INTO missions (title, description, type, reward_points, access, active, verification_type, target_kwh, created_at)
+       VALUES (?, ?, ?, ?, ?, 1, ?, ?, NOW())`,
+      [m.title, m.description, m.type, m.reward_points, m.access, m.verification_type, m.target_kwh]
+    );
+    const [newRows] = await db.query(
+      "SELECT id, title, description, type, access, reward_points AS points, active, verification_type, target_kwh, created_at FROM missions WHERE id = ?",
+      [result.insertId]
+    );
+    res.status(201).json(newRows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Erro ao duplicar missão" });
+  }
+}
+
 module.exports = {
   getMissions,
   getMission,
@@ -283,4 +409,8 @@ module.exports = {
   redeemMission,
   getPendingMissions,
   verifyMission,
+  getAllCompletions,
+  resetCompletion,
+  duplicateMission,
+  getExpiredMissions,
 };

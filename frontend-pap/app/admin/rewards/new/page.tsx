@@ -11,11 +11,13 @@ import {
   adminTextareaStyle,
 } from "../../components/formStyles";
 import { adminTopActionButtonStyle } from "../../components/tableStyles";
+import { useLanguage } from "@/app/components/LanguageProvider";
 
 type Partner = { id: number; name: string };
 
 export default function NewRewardPage() {
   const router = useRouter();
+  const { t } = useLanguage();
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -45,7 +47,7 @@ export default function NewRewardPage() {
     e.preventDefault();
 
     if (!name || !points || !stock || partnerId === "") {
-      setError("Preenche todos os campos obrigatórios");
+      setError(t("Preenche todos os campos obrigatórios"));
       return;
     }
 
@@ -72,19 +74,37 @@ export default function NewRewardPage() {
       const data = await res.json();
       setLoading(false);
 
-      if (!res.ok) return setError(data.error || "Erro ao criar reward");
+      if (!res.ok) return setError(data.error || t("Erro ao criar recompensa"));
 
       router.push("/admin/rewards");
     } catch (err) {
       console.error(err);
       setLoading(false);
-      setError("Erro de ligação ao servidor");
+      setError(t("Erro de ligação ao servidor"));
     }
   };
 
   return (
     <div style={{ padding: 40, maxWidth: 600, margin: "0 auto" }}>
-      <h1>Novo Reward</h1>
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
+        <button
+          onClick={() => router.push("/admin/rewards")}
+          style={{
+            padding: "6px 14px",
+            borderRadius: 6,
+            border: "1px solid #d1d5db",
+            backgroundColor: "#fff",
+            cursor: "pointer",
+            fontSize: 14,
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+          }}
+        >
+          {t("← Voltar")}
+        </button>
+        <h1 style={{ margin: 0 }}>{t("Nova Recompensa")}</h1>
+      </div>
 
       {error && <p style={adminErrorTextStyle}>{error}</p>}
 
@@ -94,7 +114,7 @@ export default function NewRewardPage() {
       >
         <input
           type="text"
-          placeholder="Nome"
+          placeholder={t("Nome")}
           value={name}
           onChange={(e) => setName(e.target.value)}
           required
@@ -102,7 +122,7 @@ export default function NewRewardPage() {
         />
 
         <textarea
-          placeholder="Descrição"
+          placeholder={t("Descrição")}
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           style={adminTextareaStyle}
@@ -110,7 +130,7 @@ export default function NewRewardPage() {
 
         <input
           type="number"
-          placeholder="Pontos"
+          placeholder={t("Pontos")}
           value={points}
           onChange={(e) => setPoints(e.target.value)}
           required
@@ -119,7 +139,7 @@ export default function NewRewardPage() {
 
         <input
           type="number"
-          placeholder="Stock"
+          placeholder={t("Stock")}
           value={stock}
           onChange={(e) => setStock(e.target.value)}
           required
@@ -128,7 +148,7 @@ export default function NewRewardPage() {
 
         <input
           type="text"
-          placeholder="URL da imagem"
+          placeholder={t("URL da imagem (opcional)")}
           value={imageUrl}
           onChange={(e) => setImageUrl(e.target.value)}
           style={adminInputStyle}
@@ -142,7 +162,7 @@ export default function NewRewardPage() {
           required
           style={adminSelectStyle}
         >
-          <option value="">Selecionar parceiro</option>
+          <option value="">{t("Selecionar parceiro")}</option>
           {partners.map((p) => (
             <option key={p.id} value={p.id}>
               {p.name}
@@ -151,7 +171,7 @@ export default function NewRewardPage() {
         </select>
 
         <button type="submit" disabled={loading} style={adminTopActionButtonStyle}>
-          {loading ? "Criando..." : "Criar Reward"}
+          {loading ? t("Criando...") : t("Criar Recompensa")}
         </button>
       </form>
     </div>

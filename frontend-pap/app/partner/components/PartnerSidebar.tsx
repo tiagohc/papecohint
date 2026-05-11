@@ -22,12 +22,9 @@ export default function PartnerSidebar() {
         padding: "24px 18px",
       }}
     >
-      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-        <img src="/logoback.png" alt="EcoHint" style={{ width: 44, height: 44, objectFit: "contain" }} />
-        <div>
-          <div style={{ fontSize: 26, fontWeight: 700 }}>EcoHint</div>
-          <div style={{ fontSize: 12, opacity: 0.85 }}>{t("Portal Parceiro")}</div>
-        </div>
+      <div style={{ paddingBottom: 4 }}>
+        <div style={{ fontSize: 26, fontWeight: 700 }}>EcoHint</div>
+        <div style={{ fontSize: 12, opacity: 0.85 }}>{t("Portal Parceiro")}</div>
       </div>
 
       <div className="section" style={{ display: "flex", flexDirection: "column", gap: 10 }}>

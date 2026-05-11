@@ -8,9 +8,9 @@ export type LevelInfo = {
 // Define quanto pontos precisam para subir do nível N para N+1.
 // Aqui a curva aumenta a cada nível (cada nível exige mais pontos que o anterior).
 export function pointsForNextLevel(level: number) {
-  // Ex: nível 1 requer 100, nível 2 requer 200, nível 3 requer 300 etc.
-  // Total de pontos para atingir o nível N+1 = 100 * N.
-  return 100 * level;
+  // Nível 1→2: 100, 2→3: 200, 3→4: 350, 4→5: 550, 5→6: 800...
+  // Fórmula: 100 * nível^1.5 (arredondado a dezenas)
+  return Math.round(100 * Math.pow(level, 1.5) / 10) * 10;
 }
 
 export function getLevelFromPoints(totalPoints: number): LevelInfo {
@@ -36,8 +36,8 @@ export function getLevelFromPoints(totalPoints: number): LevelInfo {
 }
 
 export function carbonSavedFromPoints(points: number) {
-  // Exemplo simples: cada 10 pontos equivale a 1 kg de CO₂ evitado.
-  return points / 10;
+  // ~20g de CO₂ por ponto (missão de transporte público = ~50pts = ~1kg CO₂)
+  return points * 0.02;
 }
 
 export function niceNumber(value: number) {

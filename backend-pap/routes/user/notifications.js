@@ -5,6 +5,17 @@ const { auth } = require("../../authMiddleware");
 
 router.use(auth);
 
+// Contagem de notificações não lidas
+router.get("/unread-count", async (req, res) => {
+  try {
+    const { getUnreadCount } = require("../../models/user/notificationsModel");
+    const count = await getUnreadCount(req.user.id);
+    res.json({ count });
+  } catch (err) {
+    res.status(500).json({ count: 0 });
+  }
+});
+
 // Listar todas as notificações do usuário
 router.get("/", getUserNotifications);
 

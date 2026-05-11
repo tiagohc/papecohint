@@ -2,73 +2,28 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { carbonSavedFromPoints } from "@/lib/progress";
 import { useLanguage } from "@/app/components/LanguageProvider";
 
-type ImpactMetric = {
-  label: string;
-  value: number;
-  unit: string;
-  color: string;
-  description: string;
+type ImpactData = {
+  co2_kg: number;
+  energy_kwh: number;
+  trips: number;
+  photo_missions: number;
 };
 
 export default function ImpactoAmbientalPage() {
   const router = useRouter();
   const { t } = useLanguage();
   const [loading, setLoading] = useState(true);
-  const [points, setPoints] = useState(0);
-  const [metrics, setMetrics] = useState<ImpactMetric[]>([]);
-
-  const computeMetrics = (userPoints: number): ImpactMetric[] => {
-    const carbon = carbonSavedFromPoints(userPoints);
-    const water = userPoints * 0.58; // aproximado em litros por ponto
-    const energy = carbon * 0.339; // aproximado em kWh por kg de CO₂
-
-    return [
-      {
-        label: t("CO₂ Economizado"),
-        value: Number(carbon.toFixed(1)),
-        unit: "kg",
-        color: "#22c55e",
-        description: userPoints > 0
-          ? t("Equivalente a uma viagem de 60 km de carro (média).")
-          : t("Sem economia registrada ainda. Complete missões para começar a reduzir CO₂."),
-      },
-      {
-        label: t("Água Economizada"),
-        value: Number(water.toFixed(0)),
-        unit: "L",
-        color: "#3b82f6",
-        description: userPoints > 0
-          ? t("Equivalente a 3 banhos rápidos.")
-          : t("Sem economia registrada ainda. Complete missões para começar a economizar água."),
-      },
-      {
-        label: t("Energia Poupada"),
-        value: Number(energy.toFixed(1)),
-        unit: "kWh",
-        color: "#f59e0b",
-        description: userPoints > 0
-          ? t("Suficiente para iluminar uma casa por 2 horas.")
-          : t("Sem economia registrada ainda. Complete missões para começar a poupar energia."),
-      },
-    ];
-  };
+  const [impact, setImpact] = useState<ImpactData | null>(null);
 
   useEffect(() => {
-    const update = () => {
-      const storedPoints = typeof window !== "undefined" ? localStorage.getItem("ecohint-points") : null;
-      const numericPoints = storedPoints ? Number(storedPoints) : 0;
-      setPoints(numericPoints);
-      setMetrics(computeMetrics(numericPoints));
-      setLoading(false);
-    };
-
-    update();
-    const interval = setInterval(update, 10000); // atualizar a cada 10 segundos
-
-    return () => clearInterval(interval);
+    const token = localStorage.getItem("token");
+    if (!token) { setLoading(false); return; }
+    fetch("/api/user/impact", { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.json())
+      .then(data => { setImpact(data); setLoading(false); })
+      .catch(() => setLoading(false));
   }, []);
 
   if (loading) return <p>{t("Carregando impacto ambiental...")}</p>;
@@ -81,12 +36,33 @@ export default function ImpactoAmbientalPage() {
     marginBottom: 20,
   };
 
+  const metrics = [
+    {
+      label: t("CO₂ Evitado"),
+      value: impact?.co2_kg ?? 0,
+      unit: "kg",
+      color: "#22c55e",
+      description: (impact?.trips ?? 0) > 0
+        ? t(`${impact!.trips} viagem(ns) de autocarro vs carro (130g CO₂/km poupados)`)
+        : t("Sem viagens registadas ainda. Submete bilhetes de transporte público."),
+    },
+    {
+      label: t("Energia Poupada"),
+      value: impact?.energy_kwh ?? 0,
+      unit: "kWh",
+      color: "#f59e0b",
+      description: (impact?.energy_kwh ?? 0) > 0
+        ? t("Estimativa baseada nas faturas de energia confirmadas.")
+        : t("Sem faturas de energia confirmadas ainda."),
+    },
+  ];
+
   return (
     <div style={{ padding: 40, maxWidth: 1000, margin: "0 auto" }}>
       <div style={cardStyle}>
         <h1 style={{ margin: 0, marginBottom: 10 }}>{t("Impacto Ambiental")}</h1>
         <p style={{ margin: 0, color: "#666" }}>
-          {t("Aqui você pode acompanhar como as suas ações impactam positivamente o planeta. Continue completando missões para melhorar seus números!")}
+          {t("Acompanha o impacto real das tuas ações. Os valores são calculados com base nas missões que concluíste.")}
         </p>
       </div>
 
@@ -112,12 +88,10 @@ export default function ImpactoAmbientalPage() {
       </div>
 
       <div style={cardStyle}>
-        <h2 style={{ margin: "0 0 15px 0" }}>{t("Como melhorar seu impacto")}</h2>
+        <h2 style={{ margin: "0 0 15px 0" }}>{t("Como melhorar o teu impacto")}</h2>
         <ul style={{ paddingLeft: 20, margin: 0, color: "#444" }}>
-          <li>{t("Complete missões que geram pontos e reduzem a pegada de carbono.")}</li>
-          <li>{t("Opte por transporte sustentável sempre que possível.")}</li>
-          <li>{t("Consuma menos água: prefira banhos mais rápidos e conserte vazamentos.")}</li>
-          <li>{t("Desligue aparelhos quando não estiver usando para economizar energia.")}</li>
+          <li>{t("Usa transportes públicos e submete os bilhetes para registar CO₂ poupado.")}</li>
+          <li>{t("Submete faturas de energia para acompanhar a redução de consumo.")}</li>
         </ul>
         <button
           style={{

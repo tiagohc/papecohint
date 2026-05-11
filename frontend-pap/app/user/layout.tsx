@@ -1,88 +1,106 @@
 "use client";
 
-import React, { ReactNode, useEffect } from "react";
-import { usePathname, useRouter } from "next/navigation";
-import Header from "@/components/layout/Header";
+import React, { ReactNode, useEffect, useState } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import UserHeader from "./components/UserHeader";
 import { useLanguage } from "@/app/components/LanguageProvider";
 import { requestNotificationPermission, onForegroundMessage } from "@/lib/pushNotifications";
 
 export default function UserLayout({ children }: { children: ReactNode }) {
-  const router = useRouter();
   const pathname = usePathname();
   const { t } = useLanguage();
+  const [unreadCount, setUnreadCount] = useState(0);
 
-  // Request push notification permission on mount
   useEffect(() => {
     requestNotificationPermission().catch(console.error);
 
-    // Show foreground notifications as browser alerts
     onForegroundMessage((payload) => {
+      // Quando a app está aberta, o FCM não mostra a notificação automaticamente.
+      // Criamos manualmente e incrementamos o badge da sidebar.
       if (Notification.permission === "granted" && payload.notification) {
         new Notification(payload.notification.title || "EcoHint", {
           body: payload.notification.body || "",
           icon: "/icons/icon-192x192.png",
         });
       }
+      // bump badge when a foreground message arrives
+      setUnreadCount((c) => c + 1);
     });
   }, []);
 
-  const sidebarItems: Array<{ label: string; key: string; href?: string }> = [
-    { label: t("Tela Inicial"), key: "Tela Inicial", href: "/user" },
-    { label: t("Missões"), key: "Missões", href: "/user/missions" },
-    { label: t("Impacto Ambiental"), key: "Impacto Ambiental", href: "/user/impacto-ambiental" },
-    { label: t("Faturas"), key: "Faturas", href: "/user/faturas" },
-    { label: t("Loja de Pontos"), key: "Loja de Pontos", href: "/user/loja-pontos" },
-    { label: t("Rankings"), key: "Rankings", href: "/user/rankings" },
-    { label: t("Notificações"), key: "Notificações", href: "/user/notificacoes" },
-    { label: t("Educação Ambiental"), key: "Educação Ambiental", href: "/user/educacao-ambiental" },
-    { label: t("Perfil"), key: "Perfil", href: "/user/perfil" },
-    { label: t("Premium"), key: "Premium", href: "/user/premium" },
+  useEffect(() => {
+    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+    if (!token) return;
+    const fetchUnread = () => {
+      fetch("/api/user/notifications/unread-count", { headers: { Authorization: `Bearer ${token}` } })
+        .then((r) => r.json())
+        .then((data) => setUnreadCount(data.count ?? 0))
+        .catch(() => {});
+    };
+    fetchUnread();
+    // Polling a cada 30s para manter o badge de não-lidas actualizado em background.
+    // Não usamos WebSocket para simplificar — 30s é suficiente para UX.
+    const interval = setInterval(fetchUnread, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // reset badge when user visits notifications page
+  useEffect(() => {
+    if (pathname === "/user/notificacoes") setUnreadCount(0);
+  }, [pathname]);
+
+  const menuItems = [
+    { name: t("Tela Inicial"), href: "/user" },
+    { name: t("Missões"), href: "/user/missions" },
+    { name: t("Impacto Ambiental"), href: "/user/impacto-ambiental" },
+    { name: t("Loja de Pontos"), href: "/user/loja-pontos" },
+    { name: t("Rankings"), href: "/user/rankings" },
+    { name: t("Notificações"), href: "/user/notificacoes", badge: unreadCount },
+    { name: t("Perfil"), href: "/user/perfil" },
+    { name: t("Premium"), href: "/user/premium" },
   ];
 
-  const getActiveLabel = () => {
-    const found = sidebarItems.find((item) => item.href === pathname);
-    return found ? found.key : "Tela Inicial";
-  };
-
-  const activeLabel = getActiveLabel();
-
   return (
-    <div style={{ display: "flex", minHeight: "100vh" }} className="user-layout-wrapper">
-      {/* Sidebar */}
-      <div className="user-sidebar" style={{ width: 220, color: "white", padding: 20 }}>
-        {sidebarItems.map((item) => {
-          const isActive = item.key === activeLabel;
-          return (
-            <div
-              key={item.label}
-              style={{
-                padding: "10px 15px",
-                marginBottom: 10,
-                cursor: item.href ? "pointer" : "default",
-                backgroundColor: isActive ? "#52b788" : "transparent",
-                color: "white",
-                borderRadius: 6,
-                border: isActive ? "1px solid #2d6a4f" : "1px solid transparent",
-                transition: "background 0.2s, border-color 0.2s",
-                opacity: item.href ? 1 : 0.7,
-                fontWeight: isActive ? 700 : 500,
-                textAlign: "center",
-              }}
-              onClick={() => {
-                if (item.href) router.push(item.href);
-              }}
-            >
-              {item.label}
-            </div>
-          );
-        })}
-      </div>
+    <>
+      <aside className="sidebar" style={{ display: "flex", flexDirection: "column", gap: 24, padding: "24px 18px" }}>
+        <div style={{ paddingBottom: 4 }}>
+          <div style={{ fontSize: 26, fontWeight: 700 }}>EcoHint</div>
+          <div style={{ fontSize: 12, opacity: 0.85 }}>{t("Portal Utilizador")}</div>
+        </div>
 
-      {/* Conteúdo */}
-      <div style={{ flex: 1 }}>
-        <Header />
+        <div className="section" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <p className="section-title" style={{ margin: 0, fontSize: 13, opacity: 0.9 }}>
+            {t("Menu")}
+          </p>
+          {menuItems.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={`item ${pathname === item.href ? "active" : ""}`}
+              style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}
+            >
+              {item.name}
+              {"badge" in item && item.badge && item.badge > 0 ? (
+                <span style={{
+                  minWidth: 20, height: 20, borderRadius: 999,
+                  backgroundColor: "#ef4444", color: "#fff",
+                  fontSize: 11, fontWeight: 700,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  padding: "0 5px",
+                }}>
+                  {item.badge > 99 ? "99+" : item.badge}
+                </span>
+              ) : null}
+            </Link>
+          ))}
+        </div>
+      </aside>
+
+      <div className="admin-content-wrapper" style={{ marginLeft: 260, minHeight: "100vh" }}>
+        <UserHeader />
         <main style={{ padding: 30 }}>{children}</main>
       </div>
-    </div>
+    </>
   );
 }

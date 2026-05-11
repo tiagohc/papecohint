@@ -4,6 +4,8 @@ const crypto = require("crypto");
 const nodemailer = require("nodemailer");
 const db = require("../db");
 
+// Verificação graceful: se a tabela partner_users ainda não existir na BD,
+// o utilizador é tratado como 'user' normal em vez de lançar erro.
 function isMissingPartnerUsersTable(err) {
   return err?.code === "ER_NO_SUCH_TABLE" && String(err?.sqlMessage || "").includes("partner_users");
 }
@@ -38,6 +40,8 @@ async function login(req, res) {
       }
     }
 
+    // Se o utilizador está em partner_users, o role no token é 'partner' (sobrevém sobre users.role).
+    // partner_id é incluído no token para que as rotas de parceiro o tenham disponível sem ir à BD.
     const isPartner = partnerLinks.length > 0;
     const authRole = isPartner ? "partner" : user.role;
     const partnerId = isPartner ? partnerLinks[0].partner_id : null;
@@ -54,23 +58,31 @@ async function login(req, res) {
     });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Erro no servidor" });
+    res.status(500).json({
+      error: "Erro no servidor",
+      details: err.message,
+      stack: err.stack,
+    });
   }
 }
 
 // REGISTER
 async function register(req, res) {
-  const { name, email, password } = req.body;
-  if (!name || !email || !password) return res.status(400).json({ error: "Dados em falta" });
+  const { name, username, email, password } = req.body;
+  if (!name || !username || !email || !password) return res.status(400).json({ error: "Dados em falta" });
 
   try {
     const [existing] = await db.query("SELECT id FROM users WHERE email = ?", [email]);
     if (existing.length > 0) return res.status(409).json({ error: "Email já existe" });
 
+    // Check username uniqueness
+    const [existingUsername] = await db.query("SELECT id FROM users WHERE username = ?", [username]);
+    if (existingUsername.length > 0) return res.status(409).json({ error: "Username já existe" });
+
     const hashedPassword = await bcrypt.hash(password, 10);
     const [result] = await db.query(
-      "INSERT INTO users (name, email, password, role, status) VALUES (?, ?, ?, 'user', 'active')",
-      [name, email, hashedPassword]
+      "INSERT INTO users (name, username, email, password, role, status) VALUES (?, ?, ?, ?, 'user', 'active')",
+      [name, username, email, hashedPassword]
     );
 
     // login automático após registro
@@ -83,7 +95,11 @@ async function register(req, res) {
     res.status(201).json({ message: "Conta criada com sucesso", token });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Erro no servidor" });
+    res.status(500).json({
+      error: "Erro no servidor",
+      details: err.message,
+      stack: err.stack,
+    });
   }
 }
 
@@ -98,7 +114,7 @@ async function forgotPassword(req, res) {
 
     const user = rows[0];
     const token = crypto.randomBytes(32).toString("hex");
-    const expires = new Date(Date.now() + 3600 * 1000); // 1 hora
+    const expires = new Date(Date.now() + 3600 * 1000); // token válido por 1 hora
 
     await db.query(
       "UPDATE users SET reset_token = ?, reset_token_expires = ? WHERE id = ?",
@@ -146,6 +162,7 @@ async function resetPassword(req, res) {
       return res.status(400).json({ error: "Token expirado" });
 
     const hashedPassword = await bcrypt.hash(password, 10);
+    // Limpa o token de reset após uso — impede reutilização do mesmo link.
     await db.query(
       "UPDATE users SET password = ?, reset_token = NULL, reset_token_expires = NULL WHERE id = ?",
       [hashedPassword, user.id]

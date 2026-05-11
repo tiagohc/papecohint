@@ -15,21 +15,50 @@ async function createReward({ name, description, points, stock, image_url, partn
 async function getAllRewards() {
   const [rewards] = await db.query(
     `SELECT r.id, r.title AS name, r.description, r.cost_points AS points, 
-            r.stock, r.image_url, r.partner_id, p.name AS partner_name,
-            r.status, r.created_at
+            r.stock, r.image_url, r.partner_id, r.status, p.name AS partner_name
      FROM rewards r
      LEFT JOIN partners p ON r.partner_id = p.id
-     ORDER BY r.created_at DESC`
+     ORDER BY r.id DESC`
   );
   return rewards;
+}
+
+// Listar recompensas pendentes de aprovação
+async function getPendingRewards() {
+  const [rewards] = await db.query(
+    `SELECT r.id, r.title AS name, r.description, r.cost_points AS points,
+            r.stock, r.image_url, r.partner_id, r.status, p.name AS partner_name
+     FROM rewards r
+     LEFT JOIN partners p ON r.partner_id = p.id
+     WHERE r.status = 'pending'
+     ORDER BY r.id DESC`
+  );
+  return rewards;
+}
+
+// Aprovar recompensa
+async function approveReward(rewardId) {
+  const [result] = await db.query(
+    "UPDATE rewards SET status = 'approved' WHERE id = ?",
+    [rewardId]
+  );
+  return result.affectedRows > 0 ? await getRewardById(rewardId) : null;
+}
+
+// Rejeitar recompensa
+async function rejectReward(rewardId) {
+  const [result] = await db.query(
+    "UPDATE rewards SET status = 'rejected' WHERE id = ?",
+    [rewardId]
+  );
+  return result.affectedRows > 0 ? await getRewardById(rewardId) : null;
 }
 
 // Obter recompensa por ID
 async function getRewardById(rewardId) {
   const [rewards] = await db.query(
     `SELECT r.id, r.title AS name, r.description, r.cost_points AS points,
-            r.stock, r.image_url, r.partner_id, p.name AS partner_name,
-            r.status, r.created_at
+            r.stock, r.image_url, r.partner_id, r.status, p.name AS partner_name
      FROM rewards r
      LEFT JOIN partners p ON r.partner_id = p.id
      WHERE r.id = ?`,
@@ -76,6 +105,9 @@ async function notifyAllUsersAboutNewReward(rewardName) {
 module.exports = {
   createReward,
   getAllRewards,
+  getPendingRewards,
+  approveReward,
+  rejectReward,
   getRewardById,
   updateReward,
   deleteReward,

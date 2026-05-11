@@ -71,16 +71,11 @@ export default function NotificacoesPage() {
 
   const getTypeIcon = (type: string) => {
     switch (type) {
-      case "mission":
-        return t("Missão");
-      case "reward":
-        return t("Recompensa");
-      case "system":
-        return t("Sistema");
-      case "reminder":
-        return t("Lembrete");
-      default:
-        return t("Notificação");
+      case "mission": return "🎯";
+      case "reward": return "🎁";
+      case "system": return "⚙️";
+      case "reminder": return "🔔";
+      default: return "📢";
     }
   };
 
@@ -186,8 +181,9 @@ export default function NotificacoesPage() {
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    fontSize: 18,
+                    fontSize: 20,
                     flexShrink: 0,
+                    lineHeight: 1,
                   }}
                 >
                   {getTypeIcon(notif.type)}

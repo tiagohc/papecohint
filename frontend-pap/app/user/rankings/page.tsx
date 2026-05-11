@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { carbonSavedFromPoints, getLevelFromPoints, niceNumber } from "@/lib/progress";
 import { useLanguage } from "@/app/components/LanguageProvider";
 
@@ -15,91 +15,55 @@ type RankingItem = {
 
 export default function RankingsPage() {
   const { t } = useLanguage();
-  const [userPoints, setUserPoints] = useState(0);
-
-  useEffect(() => {
-    const stored = typeof window !== "undefined" ? localStorage.getItem("ecohint-points") : null;
-    setUserPoints(stored ? Number(stored) : 0);
-  }, []);
-
-  const userLevel = useMemo(() => getLevelFromPoints(userPoints).level, [userPoints]);
-  const userCarbon = useMemo(() => carbonSavedFromPoints(userPoints), [userPoints]);
-
   const [ranking, setRanking] = useState<RankingItem[]>([]);
+  const [myPoints, setMyPoints] = useState(0);
+  const [myId, setMyId] = useState<number | null>(null);
 
   useEffect(() => {
     const fetchRanking = async () => {
       const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
-      const storedUser = typeof window !== "undefined" ? localStorage.getItem("ecohint-user") : null;
-
-      const getCurrentUser = () => {
-        if (!storedUser) return null;
-        const parsed = JSON.parse(storedUser);
-        const name = parsed?.name || t("Utilizador");
-        return {
-          id: parsed?.id || 0,
-          name,
-          points: userPoints,
-          level: userLevel,
-          carbon: userCarbon,
-          avatarUrl: parsed?.avatar || "https://api.dicebear.com/6.x/identicon/svg?seed=current",
-        };
-      };
-
-      const currentUser = getCurrentUser();
-
-      if (!token) {
-        setRanking(currentUser ? [currentUser] : []);
-        return;
-      }
+      if (!token) return;
 
       try {
-        const response = await fetch("/api/admin/users", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const data = await response.json();
+        const [meRes, rankRes] = await Promise.all([
+          fetch("/api/me", { headers: { Authorization: `Bearer ${token}` } }),
+          fetch("/api/user/ranking", { headers: { Authorization: `Bearer ${token}` } }),
+        ]);
+        const me = await meRes.json();
+        const data = await rankRes.json();
 
-        if (!Array.isArray(data)) {
-          setRanking(currentUser ? [currentUser] : []);
-          return;
+        if (me?.eco_points !== undefined) {
+          setMyPoints(me.eco_points);
+          setMyId(me.id);
         }
 
+        if (!Array.isArray(data)) return;
+
         const platformRanking = data
-          .filter((userItem: any) => !!userItem.name && typeof userItem.points === "number")
+          .filter((userItem: any) => !!userItem.name)
           .map((userItem: any, index: number) => ({
             id: index + 1,
             name: userItem.name,
-            points: userItem.points,
-            level: getLevelFromPoints(userItem.points).level,
-            carbon: carbonSavedFromPoints(userItem.points),
+            points: userItem.eco_points || 0,
+            level: getLevelFromPoints(userItem.eco_points || 0).level,
+            carbon: carbonSavedFromPoints(userItem.eco_points || 0),
             avatarUrl:
-              userItem.avatar ||
               "https://api.dicebear.com/6.x/identicon/svg?seed=" + encodeURIComponent(userItem.name),
-          }));
+          }))
+          .sort((a: any, b: any) => b.points - a.points)
+          .map((item: any, idx: number) => ({ ...item, id: idx + 1 }));
 
-        const merged = currentUser
-          ? [currentUser, ...platformRanking.filter((u) => u.name !== currentUser.name)]
-          : platformRanking;
-
-        const cleaned = merged
-          .sort((a, b) => {
-            if (b.points !== a.points) return b.points - a.points;
-            if (b.carbon !== a.carbon) return b.carbon - a.carbon;
-            return b.level - a.level;
-          })
-          .map((item, idx) => ({ ...item, id: idx + 1 }));
-
-        setRanking(cleaned);
+        setRanking(platformRanking);
       } catch (error) {
-        setRanking(currentUser ? [currentUser] : []);
+        console.error(error);
       }
     };
 
     fetchRanking();
-    const interval = setInterval(fetchRanking, 10000); // a cada 10 segundos
+    const interval = setInterval(fetchRanking, 30000);
 
     return () => clearInterval(interval);
-  }, [userPoints, userLevel, userCarbon]);
+  }, []);
 
   const cardStyle: React.CSSProperties = {
     padding: 20,
@@ -123,18 +87,18 @@ export default function RankingsPage() {
         <div style={{ display: "flex", gap: 15, flexWrap: "wrap" }}>
           <div style={{ flex: 1, minWidth: 220, padding: 18, borderRadius: 10, backgroundColor: "#f0fdf4" }}>
             <p style={{ margin: 0, fontSize: 12, color: "#555" }}>{t("Nível atual")}</p>
-            <p style={{ margin: "8px 0 0 0", fontSize: 32, fontWeight: 700, color: "#16a34a" }}>{userLevel}</p>
+            <p style={{ margin: "8px 0 0 0", fontSize: 32, fontWeight: 700, color: "#16a34a" }}>{getLevelFromPoints(myPoints).level}</p>
           </div>
           <div style={{ flex: 1, minWidth: 220, padding: 18, borderRadius: 10, backgroundColor: "#e0f2fe" }}>
             <p style={{ margin: 0, fontSize: 12, color: "#555" }}>{t("Pegada de carbono")}</p>
             <p style={{ margin: "8px 0 0 0", fontSize: 32, fontWeight: 700, color: "#0284c7" }}>
-              {niceNumber(userCarbon)} kg
+              {niceNumber(carbonSavedFromPoints(myPoints))} kg
             </p>
           </div>
           <div style={{ flex: 1, minWidth: 220, padding: 18, borderRadius: 10, backgroundColor: "#fef9c3" }}>
             <p style={{ margin: 0, fontSize: 12, color: "#555" }}>EcoPoints</p>
             <p style={{ margin: "8px 0 0 0", fontSize: 32, fontWeight: 700, color: "#ca8a04" }}>
-              {userPoints.toLocaleString()} pts
+              {myPoints.toLocaleString()} pts
             </p>
           </div>
         </div>

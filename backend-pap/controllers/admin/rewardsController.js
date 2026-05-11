@@ -77,9 +77,11 @@ async function getRewards(req, res) {
               r.stock,
               r.image_url,
               r.partner_id,
+              r.status,
               p.name AS partner_name
        FROM rewards r
-       LEFT JOIN partners p ON r.partner_id = p.id`
+       LEFT JOIN partners p ON r.partner_id = p.id
+       ORDER BY r.id DESC`
     );
 
     res.json(rows);
@@ -226,10 +228,48 @@ async function deleteReward(req, res) {
   }
 }
 
+async function getPendingRewards(req, res) {
+  try {
+    const { getPendingRewards: getPending } = require("../../models/admin/rewardsModel");
+    const rewards = await getPending();
+    res.json(rewards);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Erro ao listar recompensas pendentes" });
+  }
+}
+
+async function approveReward(req, res) {
+  try {
+    const { approveReward: approve } = require("../../models/admin/rewardsModel");
+    const reward = await approve(req.params.id);
+    if (!reward) return res.status(404).json({ error: "Recompensa não encontrada" });
+    res.json(reward);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Erro ao aprovar recompensa" });
+  }
+}
+
+async function rejectReward(req, res) {
+  try {
+    const { rejectReward: reject } = require("../../models/admin/rewardsModel");
+    const reward = await reject(req.params.id);
+    if (!reward) return res.status(404).json({ error: "Recompensa não encontrada" });
+    res.json(reward);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Erro ao rejeitar recompensa" });
+  }
+}
+
 module.exports = {
   createReward,
   getRewards,
   getReward,
   updateReward,
   deleteReward,
+  getPendingRewards,
+  approveReward,
+  rejectReward,
 };

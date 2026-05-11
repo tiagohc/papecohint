@@ -1,3 +1,9 @@
 node_modules/
 .env
 .env.*
+uploads/documents/*
+uploads/invoices/*
+uploads/avatars/*
+!uploads/documents/.gitkeep
+!uploads/invoices/.gitkeep
+!uploads/avatars/.gitkeep

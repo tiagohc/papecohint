@@ -14,6 +14,15 @@ type Product = {
 
 type SelectionState = Record<number, number>;
 
+type AddressForm = {
+  full_name: string;
+  address: string;
+  city: string;
+  postal_code: string;
+  phone: string;
+  notes: string;
+};
+
 export default function LojaDePontosPage() {
   const { t } = useLanguage();
   const [products, setProducts] = useState<Product[]>([]);
@@ -22,61 +31,34 @@ export default function LojaDePontosPage() {
   const [checkoutMessage, setCheckoutMessage] = useState<string | null>(null);
   const [messageType, setMessageType] = useState<"success" | "error" | "info">("info");
   const [userPoints, setUserPoints] = useState(0);
-
-  useEffect(() => {
-    const storedPoints = typeof window !== "undefined" ? localStorage.getItem("ecohint-points") : null;
-    if (storedPoints) {
-      setUserPoints(Number(storedPoints));
-    }
-  }, []);
+  const [addressModal, setAddressModal] = useState<Product | null>(null);
+  const [addressForm, setAddressForm] = useState<AddressForm>({
+    full_name: "", address: "", city: "", postal_code: "", phone: "", notes: ""
+  });
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    localStorage.setItem("ecohint-points", String(userPoints));
-  }, [userPoints]);
+    const token = localStorage.getItem("token");
+    if (!token) return;
 
-  useEffect(() => {
-    // TODO: substituir por chamada real à API (ex.: /admin/rewards)
-    const mockProducts: Product[] = [
-      {
-        id: 1,
-        name: "Camiseta EcoHint",
-        partnerName: "Loja Verde",
-        points: 120,
-        stock: 5,
-        description: "Camiseta 100% algodão orgânico com logo EcoHint.",
-      },
-      {
-        id: 2,
-        name: "Caneca Sustentável",
-        partnerName: "Casa Ecológica",
-        points: 90,
-        stock: 10,
-        description: "Caneca reutilizável para reduzir descartáveis.",
-      },
-      {
-        id: 3,
-        name: "Kit de Jardinagem",
-        partnerName: "Verdejar",
-        points: 220,
-        stock: 3,
-        description: "Kit com sementes, vasos e ferramentas básicas.",
-      },
-      {
-        id: 4,
-        name: "Bolsa Reutilizável",
-        partnerName: "Loja Verde",
-        points: 55,
-        stock: 18,
-        description: "Bolsa de tecido para compras e mercado.",
-      },
-    ];
+    // Sync points from DB
+    fetch("/api/me", { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.json())
+      .then(data => {
+        if (typeof data.eco_points === "number") {
+          setUserPoints(data.eco_points);
+          localStorage.setItem("ecohint-points", String(data.eco_points));
+        }
+      })
+      .catch(console.error);
 
-    // Simula carregamento
-    setTimeout(() => {
-      setProducts(mockProducts);
-      setLoading(false);
-    }, 400);
+    // Fetch real products
+    fetch("/api/user/rewards", { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.json())
+      .then(data => setProducts(Array.isArray(data) ? data : []))
+      .catch(console.error)
+      .finally(() => setLoading(false));
   }, []);
 
   const getQuantityOptions = (stock: number) => {
@@ -93,28 +75,48 @@ export default function LojaDePontosPage() {
   const handleBuy = (product: Product) => {
     const qty = selection[product.id] ?? 1;
     const totalPoints = product.points * qty;
-
-    if (qty < 1) return;
-
-    if (qty > product.stock) {
-      setMessageType("error");
-      setCheckoutMessage(`Estoque insuficiente para ${product.name}. Escolha uma quantidade menor.`);
-      return;
-    }
-
     if (totalPoints > userPoints) {
       setMessageType("error");
-      setCheckoutMessage(
-        `Você não tem pontos suficientes. Precisa de ${totalPoints} pts e tem apenas ${userPoints} pts.`
-      );
+      setCheckoutMessage(`Não tens pontos suficientes. Precisas de ${totalPoints} pts e tens apenas ${userPoints} pts.`);
       return;
     }
+    setAddressModal(product);
+  };
 
-    setUserPoints((prev) => prev - totalPoints);
-    setMessageType("success");
-    setCheckoutMessage(
-      `Você comprou ${qty}x ${product.name} (${product.partnerName || "Loja"}) por ${totalPoints} pontos.`
-    );
+  const handleConfirmRedeem = async () => {
+    if (!addressModal) return;
+    if (!addressForm.full_name || !addressForm.address || !addressForm.city || !addressForm.postal_code) {
+      setMessageType("error");
+      setCheckoutMessage("Preenche todos os campos obrigatórios (nome, morada, cidade e código postal).");
+      return;
+    }
+    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+    if (!token) return;
+    setSubmitting(true);
+    try {
+      const res = await fetch("/api/user/rewards/redeem", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ rewardId: addressModal.id, ...addressForm }),
+      });
+      const data = await res.json();
+      setAddressModal(null);
+      if (!res.ok) {
+        setMessageType("error");
+        setCheckoutMessage(data.error || "Erro ao resgatar recompensa.");
+        return;
+      }
+      const newPoints = userPoints - addressModal.points;
+      setUserPoints(newPoints);
+      localStorage.setItem("ecohint-points", String(newPoints));
+      setMessageType("success");
+      setCheckoutMessage(data.message);
+    } catch {
+      setMessageType("error");
+      setCheckoutMessage("Erro de ligação ao servidor.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const cardStyle: React.CSSProperties = {
@@ -127,15 +129,69 @@ export default function LojaDePontosPage() {
 
   if (loading) return <p>{t("Carregando loja...")}</p>;
 
+  const inputStyle: React.CSSProperties = {
+    width: "100%", padding: "8px 10px", borderRadius: 6,
+    border: "1px solid #d1d5db", fontSize: 14, boxSizing: "border-box",
+  };
+
   return (
     <div style={{ padding: 40, maxWidth: 1100, margin: "0 auto" }}>
+
+      {/* Modal morada de entrega */}
+      {addressModal && (
+        <div style={{ position: "fixed", inset: 0, backgroundColor: "rgba(0,0,0,0.5)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div style={{ backgroundColor: "#fff", borderRadius: 12, padding: 30, maxWidth: 480, width: "90%", boxShadow: "0 8px 32px rgba(0,0,0,0.2)" }}>
+            <h2 style={{ margin: "0 0 5px 0" }}>{t("Morada de Entrega")}</h2>
+            <p style={{ margin: "0 0 20px 0", color: "#666", fontSize: 13 }}>
+              {addressModal.name} — <strong>{addressModal.points} EcoPts</strong>
+            </p>
+
+            {checkoutMessage && (
+              <p style={{ color: "#ef4444", fontSize: 13, marginBottom: 10 }}>{checkoutMessage}</p>
+            )}
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              <input style={inputStyle} placeholder={t("Nome completo *")} value={addressForm.full_name}
+                onChange={e => setAddressForm(f => ({ ...f, full_name: e.target.value }))} />
+              <input style={inputStyle} placeholder={t("Morada (rua, número) *")} value={addressForm.address}
+                onChange={e => setAddressForm(f => ({ ...f, address: e.target.value }))} />
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                <input style={inputStyle} placeholder={t("Cidade *")} value={addressForm.city}
+                  onChange={e => setAddressForm(f => ({ ...f, city: e.target.value }))} />
+                <input style={inputStyle} placeholder={t("Código Postal *")} value={addressForm.postal_code}
+                  onChange={e => setAddressForm(f => ({ ...f, postal_code: e.target.value }))} />
+              </div>
+              <input style={inputStyle} placeholder={t("Telefone")} value={addressForm.phone}
+                onChange={e => setAddressForm(f => ({ ...f, phone: e.target.value }))} />
+              <textarea style={{ ...inputStyle, resize: "vertical", minHeight: 60 }} placeholder={t("Notas adicionais (opcional)")}
+                value={addressForm.notes} onChange={e => setAddressForm(f => ({ ...f, notes: e.target.value }))} />
+            </div>
+
+            <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
+              <button
+                onClick={() => { setAddressModal(null); setCheckoutMessage(null); }}
+                style={{ flex: 1, padding: "10px 0", borderRadius: 6, border: "1px solid #d1d5db", backgroundColor: "#fff", cursor: "pointer", fontSize: 14 }}
+              >
+                {t("Cancelar")}
+              </button>
+              <button
+                onClick={handleConfirmRedeem}
+                disabled={submitting}
+                style={{ flex: 2, padding: "10px 0", borderRadius: 6, border: "none", backgroundColor: submitting ? "#86efac" : "#22c55e", color: "#fff", cursor: submitting ? "not-allowed" : "pointer", fontWeight: 600, fontSize: 14 }}
+              >
+                {submitting ? t("A processar...") : t("Confirmar Compra")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <div style={cardStyle}>
-        <h1 style={{ margin: 0, marginBottom: 10 }}>🏬 {t("Loja de Pontos")}</h1>
+        <h1 style={{ margin: 0, marginBottom: 10 }}>{t("Loja de Pontos")}</h1>
         <p style={{ margin: 0, color: "#666" }}>
           {t("Escolha produtos disponíveis e selecione a quantidade (até 10 unidades). Os pontos necessários serão calculados automaticamente.")}
         </p>
         <p style={{ margin: "10px 0 0 0", color: "#1f2937", fontWeight: 600 }}>
-          {t("Saldo atual:")} <span style={{ color: "#16a34a" }}>{userPoints.toLocaleString()} pts</span>
+          {t("Saldo atual:")} <span style={{ color: "#16a34a" }}>{userPoints.toLocaleString()} EcoPts</span>
         </p>
       </div>
 
@@ -204,7 +260,7 @@ export default function LojaDePontosPage() {
                     fontWeight: 600,
                   }}
                 >
-                  {disabled ? t("Neste momento não está disponível") : `Stock: ${product.stock}`}
+                  {disabled ? t("Neste momento não está disponível") : t("Disponível")}
                 </div>
               </div>
 
@@ -236,7 +292,7 @@ export default function LojaDePontosPage() {
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: 12, color: "#555" }}>{t("Total de pontos")}</div>
                   <div style={{ fontSize: 18, fontWeight: 700, color: "#16a34a" }}>
-                    {totalPoints} pts
+                    {totalPoints} EcoPts
                   </div>
                 </div>
 

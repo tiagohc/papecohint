@@ -6,6 +6,9 @@ const {
   getReward,
   updateReward,
   deleteReward,
+  getPendingRewards,
+  approveReward,
+  rejectReward,
 } = require("../../controllers/admin/rewardsController");
 const { auth, adminOnly } = require("../../authMiddleware");
 
@@ -15,8 +18,11 @@ router.use(auth);
 // CRUD rewards - só admin
 router.post("/", adminOnly, createReward);
 router.get("/", adminOnly, getRewards);
+router.get("/pending", adminOnly, getPendingRewards);
 router.get("/:id", adminOnly, getReward);
 router.put("/:id", adminOnly, updateReward);
 router.delete("/:id", adminOnly, deleteReward);
+router.post("/:id/approve", adminOnly, approveReward);
+router.post("/:id/reject", adminOnly, rejectReward);
 
 module.exports = router;

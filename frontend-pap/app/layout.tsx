@@ -1,6 +1,7 @@
 import "./globals.css";
 import { LanguageProvider } from "./components/LanguageProvider";
 import ThemeProvider from "./components/ThemeProvider";
+import SplashScreen from "./components/SplashScreen";
 
 export const metadata = {
   manifest: "/manifest.json",
@@ -17,6 +18,7 @@ export default function RootLayout({
       <body>
         <ThemeProvider>
           <LanguageProvider>
+            <SplashScreen />
             {children}
           </LanguageProvider>
         </ThemeProvider>

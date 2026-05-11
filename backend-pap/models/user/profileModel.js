@@ -1,31 +1,39 @@
 const db = require("../../db");
-const bcrypt = require("bcryptjs");
 
-// Obter perfil do usuário por ID
+// Devolve os dados do perfil do utilizador pelo seu ID
 async function getProfileById(userId) {
   const [rows] = await db.query(
-    "SELECT id, name, email, role, language, status, created_at FROM users WHERE id = ?",
+    "SELECT id, name, email, role, status, avatar_url, created_at FROM users WHERE id = ?",
     [userId]
   );
   return rows.length > 0 ? rows[0] : null;
 }
 
-// Atualizar perfil do usuário
-async function updateProfile(userId, { name, language }) {
+// Atualiza o nome do utilizador
+async function updateProfile(userId, { name }) {
   const [result] = await db.query(
-    "UPDATE users SET name = ?, language = ? WHERE id = ?",
-    [name, language || null, userId]
+    "UPDATE users SET name = ? WHERE id = ?",
+    [name, userId]
   );
   return result.affectedRows > 0;
 }
 
-// Obter senha hasheada para validação
+// Atualiza o URL do avatar do utilizador
+async function updateAvatar(userId, avatarUrl) {
+  const [result] = await db.query(
+    "UPDATE users SET avatar_url = ? WHERE id = ?",
+    [avatarUrl, userId]
+  );
+  return result.affectedRows > 0;
+}
+
+// Devolve a password em hash (para validação na troca de senha)
 async function getPasswordByUserId(userId) {
   const [rows] = await db.query("SELECT password FROM users WHERE id = ?", [userId]);
   return rows.length > 0 ? rows[0].password : null;
 }
 
-// Atualizar senha do usuário
+// Guarda a nova password já em hash
 async function updatePassword(userId, hashedPassword) {
   const [result] = await db.query(
     "UPDATE users SET password = ? WHERE id = ?",
@@ -37,6 +45,7 @@ async function updatePassword(userId, hashedPassword) {
 module.exports = {
   getProfileById,
   updateProfile,
+  updateAvatar,
   getPasswordByUserId,
   updatePassword,
 };

@@ -1,0 +1,89 @@
+services:
+  # ── Backend (Node.js API) ──────────────────────────────────────────
+  - type: web
+    name: ecohint-backend
+    runtime: node
+    rootDir: backend-pap
+    buildCommand: npm install
+    startCommand: node index.js
+    plan: free
+    envVars:
+      # Database — set these in the Render dashboard (Environment tab)
+      - key: DB_HOST
+        sync: false
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: DB_NAME
+        sync: false
+      - key: DB_PORT
+        value: "3306"
+      # Auth
+      - key: JWT_SECRET
+        sync: false
+      # Email (nodemailer)
+      - key: EMAIL_USER
+        sync: false
+      - key: EMAIL_PASS
+        sync: false
+      # CORS — set to the Render frontend URL after frontend deploys
+      # Example: https://ecohint-frontend.onrender.com
+      - key: ALLOWED_ORIGINS
+        sync: false
+      # Frontend URL (used by Stripe redirect)
+      - key: FRONTEND_URL
+        sync: false
+      # OpenAI
+      - key: OPENAI_API_KEY
+        sync: false
+      # Stripe
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: STRIPE_PRICE_ID_PREMIUM_MONTHLY
+        sync: false
+      # EasyPay
+      - key: EASYPAY_ACCOUNT_ID
+        sync: false
+      - key: EASYPAY_API_KEY
+        sync: false
+      - key: EASYPAY_ENV
+        value: "test"
+      # Firebase Admin
+      - key: FIREBASE_PROJECT_ID
+        sync: false
+      - key: FIREBASE_CLIENT_EMAIL
+        sync: false
+      - key: FIREBASE_PRIVATE_KEY
+        sync: false
+
+  # ── Frontend (Next.js) ────────────────────────────────────────────
+  - type: web
+    name: ecohint-frontend
+    runtime: node
+    rootDir: frontend-pap
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    plan: free
+    envVars:
+      # Set this to the ecohint-backend Render URL
+      # Example: https://ecohint-backend.onrender.com
+      - key: API_BASE_URL
+        sync: false
+      # Firebase (public keys — safe to expose)
+      - key: NEXT_PUBLIC_FIREBASE_API_KEY
+        sync: false
+      - key: NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+        sync: false
+      - key: NEXT_PUBLIC_FIREBASE_PROJECT_ID
+        sync: false
+      - key: NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+        sync: false
+      - key: NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+        sync: false
+      - key: NEXT_PUBLIC_FIREBASE_APP_ID
+        sync: false
+      - key: NEXT_PUBLIC_FIREBASE_VAPID_KEY
+        sync: false

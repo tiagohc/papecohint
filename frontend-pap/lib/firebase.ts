@@ -10,14 +10,16 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
+// Singleton: garante que a app Firebase só é inicializada uma vez mesmo com re-renders do Next.js.
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
 
 let messagingInstance: Messaging | null = null;
 
 export async function getFirebaseMessaging(): Promise<Messaging | null> {
-  if (typeof window === "undefined") return null;
-  if (messagingInstance) return messagingInstance;
+  if (typeof window === "undefined") return null; // Firebase Messaging não funciona em SSR
+  if (messagingInstance) return messagingInstance; // reutiliza instância já criada
 
+  // Alguns browsers (Safari antigo, modo incógnito) não suportam push notifications
   const supported = await isSupported();
   if (!supported) {
     console.warn("Firebase Messaging not supported in this browser");
