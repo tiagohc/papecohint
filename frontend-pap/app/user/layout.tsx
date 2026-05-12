@@ -97,6 +97,50 @@ export default function UserLayout({ children }: { children: ReactNode }) {
         </div>
       </aside>
 
+      {/* Bottom nav — só visível em mobile */}
+      <nav className="mobile-bottom-nav" style={{
+        display: "none",
+        position: "fixed", bottom: 0, left: 0, right: 0,
+        backgroundColor: "#1b5e20",
+        borderTop: "1px solid rgba(255,255,255,0.15)",
+        zIndex: 1000,
+        overflowX: "auto",
+        WebkitOverflowScrolling: "touch",
+      }}>
+        {menuItems.map((item) => (
+          <Link
+            key={item.href}
+            href={item.href}
+            style={{
+              flex: "0 0 auto",
+              display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+              padding: "8px 14px",
+              color: pathname === item.href ? "#86efac" : "rgba(255,255,255,0.75)",
+              textDecoration: "none",
+              fontSize: 10,
+              fontWeight: pathname === item.href ? 700 : 400,
+              borderTop: pathname === item.href ? "2px solid #86efac" : "2px solid transparent",
+              position: "relative",
+              minWidth: 60,
+            }}
+          >
+            {item.name}
+            {"badge" in item && item.badge && item.badge > 0 ? (
+              <span style={{
+                position: "absolute", top: 4, right: 8,
+                minWidth: 16, height: 16, borderRadius: 999,
+                backgroundColor: "#ef4444", color: "#fff",
+                fontSize: 9, fontWeight: 700,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                padding: "0 3px",
+              }}>
+                {item.badge > 99 ? "99+" : item.badge}
+              </span>
+            ) : null}
+          </Link>
+        ))}
+      </nav>
+
       <div className="admin-content-wrapper" style={{ marginLeft: 260, minHeight: "100vh" }}>
         <UserHeader />
         <main style={{ padding: 30 }}>{children}</main>
