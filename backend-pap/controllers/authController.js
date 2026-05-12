@@ -68,8 +68,16 @@ async function login(req, res) {
 
 // REGISTER
 async function register(req, res) {
-  const { name, username, email, password } = req.body;
-  if (!name || !username || !email || !password) return res.status(400).json({ error: "Dados em falta" });
+  const { name, email, password } = req.body;
+  // username is optional — auto-generate from email prefix if not provided
+  let { username } = req.body;
+  if (!name || !email || !password) return res.status(400).json({ error: "Dados em falta" });
+
+  if (!username) {
+    // derive from email, strip special chars, ensure uniqueness with random suffix
+    const base = email.split("@")[0].replace(/[^a-zA-Z0-9_]/g, "").toLowerCase() || "user";
+    username = base + Math.floor(1000 + Math.random() * 9000);
+  }
 
   try {
     const [existing] = await db.query("SELECT id FROM users WHERE email = ?", [email]);
@@ -77,7 +85,9 @@ async function register(req, res) {
 
     // Check username uniqueness
     const [existingUsername] = await db.query("SELECT id FROM users WHERE username = ?", [username]);
-    if (existingUsername.length > 0) return res.status(409).json({ error: "Username já existe" });
+    if (existingUsername.length > 0) {
+      username = username + Math.floor(10 + Math.random() * 90);
+    }
 
     const hashedPassword = await bcrypt.hash(password, 10);
     const [result] = await db.query(
