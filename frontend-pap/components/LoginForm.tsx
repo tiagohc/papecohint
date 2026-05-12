@@ -9,7 +9,7 @@ export default function AuthForm() {
   const { t, setLanguage, language } = useLanguage();
   const { setTheme } = useTheme();
   const [isRegister, setIsRegister] = useState(false);
-  const [name, setName] = useState("");
+  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -52,7 +52,7 @@ export default function AuthForm() {
         const res = await fetch("/api/register", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name, email, password }),
+          body: JSON.stringify({ username, email, password }),
         });
 
         if (res.status === 429) {
@@ -240,10 +240,12 @@ export default function AuthForm() {
         {isRegister && (
           <input
             type="text"
-            placeholder={t("Nome")}
-            value={name}
-            onChange={(e) => setName(e.target.value)}
+            placeholder={t("Username")}
+            value={username}
+            onChange={(e) => setUsername(e.target.value.replace(/\s/g, ""))}
             required
+            minLength={3}
+            maxLength={30}
             style={{ padding: 12, borderRadius: 6, fontSize: 16 }}
           />
         )}

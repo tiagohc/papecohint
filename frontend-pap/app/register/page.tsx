@@ -17,7 +17,6 @@ export default function RegisterPage() {
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const [name, setName] = useState("");
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -47,7 +46,7 @@ export default function RegisterPage() {
       const res = await fetch("/api/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, username, email, password }),
+        body: JSON.stringify({ username, email, password }),
       });
 
       if (res.status === 429) {
@@ -57,7 +56,7 @@ export default function RegisterPage() {
         const retry = await fetch("/api/register", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name, username, email, password }),
+          body: JSON.stringify({ username, email, password }),
         });
         if (retry.status === 429) {
           setError("Servidor temporariamente sobrecarregado. Aguarda uns segundos e tenta novamente.");
@@ -170,16 +169,6 @@ export default function RegisterPage() {
             onChange={handleFileChange}
           />
         </div>
-
-        <label style={{ fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 4, display: "block" }}>Nome completo</label>
-        <input
-          type="text"
-          placeholder="O teu nome"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          required
-          style={inputStyle}
-        />
 
         <label style={{ fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 4, display: "block" }}>Username</label>
         <input
