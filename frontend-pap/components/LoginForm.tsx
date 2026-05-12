@@ -15,6 +15,8 @@ export default function AuthForm() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [langOpen, setLangOpen] = useState(false);
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotMessage, setForgotMessage] = useState("");
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const languages = [
@@ -303,18 +305,46 @@ export default function AuthForm() {
 
         {/* Link para esquecer password */}
         {!isRegister && (
-          <p style={{ textAlign: "center", marginTop: 5 }}>
+          <div style={{ textAlign: "center", marginTop: 5 }}>
             <span
-              onClick={() => (window.location.href = "/forgot-password")}
+              onClick={async () => {
+                if (forgotLoading) return;
+                if (!email) {
+                  setForgotMessage(t("Introduz o teu email no campo acima"));
+                  return;
+                }
+                setForgotLoading(true);
+                setForgotMessage("");
+                try {
+                  const res = await fetch("/api/forgot-password", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ email }),
+                  });
+                  const data = await res.json();
+                  setForgotMessage(res.ok
+                    ? t("Email de recuperação enviado! Verifica a tua caixa de entrada.")
+                    : data.error || t("Erro ao enviar email"));
+                } catch {
+                  setForgotMessage(t("Erro ao conectar com o servidor"));
+                } finally {
+                  setForgotLoading(false);
+                }
+              }}
               style={{
                 color: "#2e7d32",
                 fontWeight: "bold",
-                cursor: "pointer",
+                cursor: forgotLoading ? "wait" : "pointer",
               }}
             >
-              {t("Esqueci a password")}
+              {forgotLoading ? t("Enviando...") : t("Esqueci a password")}
             </span>
-          </p>
+            {forgotMessage && (
+              <p style={{ fontSize: 13, marginTop: 6, color: forgotMessage.includes("enviado") || forgotMessage.includes("sent") ? "#2e7d32" : "red" }}>
+                {forgotMessage}
+              </p>
+            )}
+          </div>
         )}
       </form>
     </div>
