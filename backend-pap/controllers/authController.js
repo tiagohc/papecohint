@@ -132,7 +132,8 @@ async function forgotPassword(req, res) {
       },
     });
 
-    const resetLink = `http://localhost:3000/reset-password?token=${token}`;
+    const baseUrl = process.env.FRONTEND_URL || "https://papecohint.onrender.com";
+    const resetLink = `${baseUrl}/reset-password?token=${token}`;
 
     await transporter.sendMail({
       from: `"EcoHint" <${process.env.EMAIL_USER}>`,
