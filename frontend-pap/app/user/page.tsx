@@ -129,7 +129,7 @@ export default function UserPage() {
   if (loading) return <p>{t("Carregando...")}</p>;
 
   return (
-    <div style={{ padding: 40, maxWidth: 1200, margin: "0 auto" }}>
+    <div className="page-content" style={{ padding: 40, maxWidth: 1200, margin: "0 auto" }}>
       {/* Welcome */}
       {user && (
         <div style={{ marginBottom: 28 }}>
@@ -143,6 +143,7 @@ export default function UserPage() {
       )}
       {/* Stats Grid */}
       <div
+        className="stats-grid"
         style={{
           display: "grid",
           gridTemplateColumns: "repeat(4, 1fr)",

@@ -72,7 +72,6 @@ export default function UserHeader({ onMenuClick }: { onMenuClick?: () => void }
             onClick={onMenuClick}
             className="hamburger-btn"
             style={{
-              display: "none",
               background: "none", border: "none", cursor: "pointer",
               fontSize: 26, color: "#1f2937", padding: "0 4px",
               lineHeight: 1,

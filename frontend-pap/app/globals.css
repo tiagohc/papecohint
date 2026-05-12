@@ -490,6 +490,20 @@ tbody tr:hover {
 /* =========================
    RESPONSIVE
 ========================= */
+
+/* Desktop: hide hamburger, hide drawer/overlay */
+.hamburger-btn {
+  display: none;
+}
+
+.mobile-drawer {
+  display: none;
+}
+
+.mobile-overlay {
+  display: none;
+}
+
 @media (max-width: 768px) {
   .sidebar {
     display: none !important;
@@ -519,6 +533,21 @@ tbody tr:hover {
   /* Bottom nav bar on mobile */
   .mobile-bottom-nav {
     display: flex !important;
+  }
+
+  /* Stats grid: 2 columns on mobile */
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+  /* Reduce outer page padding on mobile */
+  .page-content {
+    padding: 12px !important;
+  }
+
+  /* Reduce main wrapper padding on mobile */
+  .admin-content-wrapper > main {
+    padding: 8px !important;
   }
 }
 
