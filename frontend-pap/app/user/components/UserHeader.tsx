@@ -6,7 +6,7 @@ import HeaderToggles from "@/components/HeaderToggles";
 import { useLanguage } from "@/app/components/LanguageProvider";
 import { useTheme } from "next-themes";
 
-export default function UserHeader() {
+export default function UserHeader({ onMenuClick }: { onMenuClick?: () => void }) {
   const router = useRouter();
   const pathname = usePathname();
   const { t } = useLanguage();
@@ -66,6 +66,19 @@ export default function UserHeader() {
       }}
     >
       <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+        {/* Botão hamburguer — só visível em mobile */}
+        {onMenuClick && (
+          <button
+            onClick={onMenuClick}
+            className="hamburger-btn"
+            style={{
+              display: "none",
+              background: "none", border: "none", cursor: "pointer",
+              fontSize: 26, color: "#1f2937", padding: "0 4px",
+              lineHeight: 1,
+            }}
+          >☰</button>
+        )}
         <img
           src="/logoback.png"
           alt="EcoHint"

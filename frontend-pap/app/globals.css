@@ -495,10 +495,21 @@ tbody tr:hover {
     display: none !important;
   }
 
+  .mobile-drawer {
+    display: flex !important;
+  }
+
+  .mobile-overlay {
+    display: block !important;
+  }
+
+  .hamburger-btn {
+    display: block !important;
+  }
+
   .admin-content-wrapper,
   .partner-content-wrapper {
     margin-left: 0 !important;
-    padding-bottom: 70px;
   }
 
   .header {
