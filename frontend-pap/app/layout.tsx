@@ -7,6 +7,14 @@ export const metadata = {
   manifest: "/manifest.json",
   themeColor: "#4CAF50",
 };
+
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: "cover",
+};
 export default function RootLayout({
   children,
 }: {
