@@ -1,21 +1,107 @@
 "use client";
 
-import React from "react";
-import PartnerSidebar from "./components/PartnerSidebar";
+import React, { useEffect, useState } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import PartnerHeader from "./components/PartnerHeader";
+import { useLanguage } from "@/app/components/LanguageProvider";
 
 export default function PartnerLayout({ children }: { children: React.ReactNode }) {
-  return (
+  const pathname = usePathname();
+  const { t } = useLanguage();
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 768px)");
+    setIsMobile(mq.matches);
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
+
+  useEffect(() => {
+    setDrawerOpen(false);
+  }, [pathname]);
+
+  const menuItems = [
+    { name: t("Meus Produtos"), href: "/partner" },
+  ];
+
+  const sidebarContent = (
     <>
-      <PartnerSidebar />
+      <div style={{ paddingBottom: 4 }}>
+        <div style={{ fontSize: 26, fontWeight: 700 }}>EcoHint</div>
+        <div style={{ fontSize: 12, opacity: 0.85 }}>{t("Portal Parceiro")}</div>
+      </div>
+      <div className="section" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        <p className="section-title" style={{ margin: 0, fontSize: 13, opacity: 0.9 }}>
+          {t("Gestão da Loja")}
+        </p>
+        {menuItems.map((item) => (
+          <Link
+            key={item.href}
+            href={item.href}
+            className={`item ${pathname === item.href ? "active" : ""}`}
+          >
+            {item.name}
+          </Link>
+        ))}
+      </div>
       <div
-        className="partner-content-wrapper"
         style={{
-          minHeight: "100vh",
+          marginTop: "auto",
+          padding: 14,
+          borderRadius: 12,
+          background: "rgba(255,255,255,0.12)",
+          fontSize: 13,
+          lineHeight: 1.5,
         }}
       >
-        <PartnerHeader />
-        <main style={{ padding: 30 }}>{children}</main>
+        Define os pontos, ajusta o stock e mantém o teu catálogo atualizado.
+      </div>
+    </>
+  );
+
+  return (
+    <>
+      {!isMobile && (
+        <aside className="sidebar" style={{ display: "flex", flexDirection: "column", gap: 24, padding: "24px 18px" }}>
+          {sidebarContent}
+        </aside>
+      )}
+
+      {isMobile && drawerOpen && (
+        <div
+          onClick={() => setDrawerOpen(false)}
+          style={{ position: "fixed", inset: 0, backgroundColor: "rgba(0,0,0,0.5)", zIndex: 998 }}
+        />
+      )}
+
+      {isMobile && (
+        <aside
+          style={{
+            position: "fixed", top: 0, left: drawerOpen ? 0 : "-280px",
+            width: 260, height: "100vh",
+            background: "linear-gradient(180deg, #1b5e20, #2e7d32)",
+            color: "white", zIndex: 999,
+            transition: "left 0.3s ease",
+            display: "flex",
+            flexDirection: "column", gap: 24, padding: "24px 18px",
+            overflowY: "auto",
+          }}
+        >
+          <button
+            onClick={() => setDrawerOpen(false)}
+            style={{ alignSelf: "flex-end", background: "none", border: "none", color: "white", fontSize: 24, cursor: "pointer", padding: 0 }}
+          >✕</button>
+          {sidebarContent}
+        </aside>
+      )}
+
+      <div className="partner-content-wrapper" style={{ minHeight: "100vh" }}>
+        <PartnerHeader onMenuClick={isMobile ? () => setDrawerOpen(true) : undefined} />
+        <main style={{ padding: isMobile ? 12 : 30 }}>{children}</main>
       </div>
     </>
   );
