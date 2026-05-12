@@ -12,6 +12,15 @@ export default function UserHeader({ onMenuClick }: { onMenuClick?: () => void }
   const { t } = useLanguage();
   const { setTheme } = useTheme();
   const [user, setUser] = useState<{ email?: string; name?: string } | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 768px)");
+    setIsMobile(mq.matches);
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
 
   useEffect(() => {
     const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
@@ -67,10 +76,9 @@ export default function UserHeader({ onMenuClick }: { onMenuClick?: () => void }
     >
       <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
         {/* Botão hamburguer — só visível em mobile */}
-        {onMenuClick && (
+        {onMenuClick && isMobile && (
           <button
             onClick={onMenuClick}
-            className="hamburger-btn"
             style={{
               background: "none", border: "none", cursor: "pointer",
               fontSize: 26, color: "#1f2937", padding: "0 4px",

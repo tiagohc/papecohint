@@ -12,6 +12,15 @@ export default function UserLayout({ children }: { children: ReactNode }) {
   const { t } = useLanguage();
   const [unreadCount, setUnreadCount] = useState(0);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 768px)");
+    setIsMobile(mq.matches);
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
 
   useEffect(() => {
     requestNotificationPermission().catch(console.error);
@@ -92,49 +101,51 @@ export default function UserLayout({ children }: { children: ReactNode }) {
   return (
     <>
       {/* Sidebar desktop */}
-      <aside className="sidebar" style={{ display: "flex", flexDirection: "column", gap: 24, padding: "24px 18px" }}>
-        {sidebarContent}
-      </aside>
+      {!isMobile && (
+        <aside className="sidebar" style={{ display: "flex", flexDirection: "column", gap: 24, padding: "24px 18px" }}>
+          {sidebarContent}
+        </aside>
+      )}
 
       {/* Overlay mobile quando drawer está aberto */}
-      {drawerOpen && (
+      {isMobile && drawerOpen && (
         <div
           onClick={() => setDrawerOpen(false)}
           style={{
             position: "fixed", inset: 0, backgroundColor: "rgba(0,0,0,0.5)",
-            zIndex: 998, display: "none",
+            zIndex: 998,
           }}
-          className="mobile-overlay"
         />
       )}
 
       {/* Drawer mobile */}
-      <aside
-        className="mobile-drawer"
-        style={{
-          position: "fixed", top: 0, left: drawerOpen ? 0 : "-280px",
-          width: 260, height: "100vh",
-          background: "linear-gradient(180deg, #1b5e20, #2e7d32)",
-          color: "white", zIndex: 999,
-          transition: "left 0.3s ease",
-          display: "none",
-          flexDirection: "column", gap: 24, padding: "24px 18px",
-          overflowY: "auto",
-        }}
-      >
-        <button
-          onClick={() => setDrawerOpen(false)}
+      {isMobile && (
+        <aside
           style={{
-            alignSelf: "flex-end", background: "none", border: "none",
-            color: "white", fontSize: 24, cursor: "pointer", padding: 0,
+            position: "fixed", top: 0, left: drawerOpen ? 0 : "-280px",
+            width: 260, height: "100vh",
+            background: "linear-gradient(180deg, #1b5e20, #2e7d32)",
+            color: "white", zIndex: 999,
+            transition: "left 0.3s ease",
+            display: "flex",
+            flexDirection: "column", gap: 24, padding: "24px 18px",
+            overflowY: "auto",
           }}
-        >✕</button>
-        {sidebarContent}
-      </aside>
+        >
+          <button
+            onClick={() => setDrawerOpen(false)}
+            style={{
+              alignSelf: "flex-end", background: "none", border: "none",
+              color: "white", fontSize: 24, cursor: "pointer", padding: 0,
+            }}
+          >✕</button>
+          {sidebarContent}
+        </aside>
+      )}
 
       <div className="admin-content-wrapper" style={{ minHeight: "100vh" }}>
-        <UserHeader onMenuClick={() => setDrawerOpen(true)} />
-        <main style={{ padding: 30 }}>{children}</main>
+        <UserHeader onMenuClick={isMobile ? () => setDrawerOpen(true) : undefined} />
+        <main style={{ padding: isMobile ? 12 : 30 }}>{children}</main>
       </div>
     </>
   );

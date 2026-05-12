@@ -34,6 +34,15 @@ export default function UserPage() {
   const { t } = useLanguage();
   const [user, setUser] = useState<User | null>(null);
   const [userPoints, setUserPoints] = useState(0);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 768px)");
+    setIsMobile(mq.matches);
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
   const [missionsCompleted, setMissionsCompleted] = useState(0);
   const [rewards, setRewards] = useState<Reward[]>([]);
   const [totalRewards, setTotalRewards] = useState(0);
@@ -129,7 +138,7 @@ export default function UserPage() {
   if (loading) return <p>{t("Carregando...")}</p>;
 
   return (
-    <div className="page-content" style={{ padding: 40, maxWidth: 1200, margin: "0 auto" }}>
+    <div style={{ padding: isMobile ? 12 : 40, maxWidth: 1200, margin: "0 auto" }}>
       {/* Welcome */}
       {user && (
         <div style={{ marginBottom: 28 }}>
@@ -143,11 +152,10 @@ export default function UserPage() {
       )}
       {/* Stats Grid */}
       <div
-        className="stats-grid"
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(4, 1fr)",
-          gap: 15,
+          gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(4, 1fr)",
+          gap: isMobile ? 10 : 15,
           marginBottom: 30,
         }}
       >
