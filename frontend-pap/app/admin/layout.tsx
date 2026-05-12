@@ -26,13 +26,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
     if (!token) return;
     const fetchPending = () => {
+      if (document.hidden) return;
       fetch("/api/admin/rewards/pending", { headers: { Authorization: `Bearer ${token}` } })
-        .then((r) => r.json())
-        .then((data) => setPendingCount(Array.isArray(data) ? data.length : 0))
+        .then((r) => { if (!r.ok) return null; return r.json(); })
+        .then((data) => { if (data) setPendingCount(Array.isArray(data) ? data.length : 0); })
         .catch(() => {});
     };
     fetchPending();
-    const interval = setInterval(fetchPending, 30000);
+    const interval = setInterval(fetchPending, 300000); // 5 minutes
     return () => clearInterval(interval);
   }, []);
 

@@ -1,6 +1,7 @@
 require("dotenv").config(); // 🔹 carregar .env primeiro
 const cors = require("cors");
 const express = require("express");
+const rateLimit = require("express-rate-limit");
 const app = express();
 const PORT = process.env.PORT || 8000;
 const jwt = require("jsonwebtoken");
@@ -51,6 +52,27 @@ app.use(cors({
 app.post("/payments/webhook", express.raw({ type: "application/json" }), handleStripeWebhook);
 // Webhook EasyPay (JSON normal)
 app.post("/payments/easypay/webhook", express.json(), handleEasypayWebhook);
+
+// Rate limiting — permite 300 pedidos por 15 min por IP (uso normal da app)
+// Auth endpoints têm limite mais apertado para evitar brute force
+const generalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 300,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Demasiados pedidos. Tenta novamente em breve." },
+});
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Demasiadas tentativas de login/registo. Tenta novamente em 15 minutos." },
+});
+app.use("/login", authLimiter);
+app.use("/register", authLimiter);
+app.use("/forgot-password", authLimiter);
+app.use(generalLimiter);
 
 app.use(express.json({ limit: "15mb" })); // necessário para receber JSON no body (15mb para base64 de imagens)
 

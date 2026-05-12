@@ -39,13 +39,18 @@ export default function UserLayout({ children }: { children: ReactNode }) {
     const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
     if (!token) return;
     const fetchUnread = () => {
+      // Don't poll when tab is hidden
+      if (document.hidden) return;
       fetch("/api/user/notifications/unread-count", { headers: { Authorization: `Bearer ${token}` } })
-        .then((r) => r.json())
-        .then((data) => setUnreadCount(data.count ?? 0))
+        .then((r) => {
+          if (!r.ok) return null; // ignore 429 / errors
+          return r.json();
+        })
+        .then((data) => { if (data) setUnreadCount(data.count ?? 0); })
         .catch(() => {});
     };
     fetchUnread();
-    const interval = setInterval(fetchUnread, 30000);
+    const interval = setInterval(fetchUnread, 300000); // 5 minutes
     return () => clearInterval(interval);
   }, []);
 
