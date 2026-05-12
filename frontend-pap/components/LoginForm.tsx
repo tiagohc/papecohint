@@ -55,6 +55,12 @@ export default function AuthForm() {
           body: JSON.stringify({ name, email, password }),
         });
 
+        if (res.status === 429) {
+          setError(t("Servidor sobrecarregado. Aguarda uns segundos e tenta novamente."));
+          setLoading(false);
+          return;
+        }
+
         const data = await res.json();
         if (!res.ok) {
           setError(data.error || t("Erro ao criar conta"));
@@ -68,6 +74,12 @@ export default function AuthForm() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email, password }),
         });
+
+        if (loginRes.status === 429) {
+          setError(t("Servidor sobrecarregado. Aguarda uns segundos e tenta novamente."));
+          setLoading(false);
+          return;
+        }
 
         const loginData = await loginRes.json();
         if (!loginRes.ok) {
@@ -93,6 +105,12 @@ export default function AuthForm() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email, password }),
         });
+
+        if (res.status === 429) {
+          setError(t("Servidor sobrecarregado. Aguarda uns segundos e tenta novamente."));
+          setLoading(false);
+          return;
+        }
 
         const data = await res.json();
         if (!res.ok) {

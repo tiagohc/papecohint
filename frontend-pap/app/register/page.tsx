@@ -50,6 +50,32 @@ export default function RegisterPage() {
         body: JSON.stringify({ name, username, email, password }),
       });
 
+      if (res.status === 429) {
+        // Render free tier sometimes throttles on wake-up — retry once after 3s
+        setError("Servidor a acordar... a tentar novamente em 3 segundos.");
+        await new Promise((r) => setTimeout(r, 3000));
+        const retry = await fetch("/api/register", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name, username, email, password }),
+        });
+        if (retry.status === 429) {
+          setError("Servidor temporariamente sobrecarregado. Aguarda uns segundos e tenta novamente.");
+          setLoading(false);
+          return;
+        }
+        const retryData = await retry.json();
+        if (!retry.ok) {
+          setError(retryData.error || "Erro ao criar conta");
+          setLoading(false);
+          return;
+        }
+        const retryToken: string = retryData.token;
+        localStorage.setItem("token", retryToken);
+        router.push("/user");
+        return;
+      }
+
       const data = await res.json();
 
       if (!res.ok) {
