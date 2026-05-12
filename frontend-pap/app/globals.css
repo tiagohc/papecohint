@@ -524,10 +524,12 @@ tbody tr:hover {
 
 .admin-content-wrapper {
   background: linear-gradient(135deg, #f0fdf4 0%, #f4f8f5 100%);
+  margin-left: 260px;
 }
 
 .partner-content-wrapper {
   background: linear-gradient(180deg, #f0fdfa 0%, #ecfeff 48%, #f8fafc 100%);
+  margin-left: 260px;
 }
 
 [data-theme="dark"] .user-layout-wrapper {

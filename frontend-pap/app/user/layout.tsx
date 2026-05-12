@@ -141,7 +141,7 @@ export default function UserLayout({ children }: { children: ReactNode }) {
         ))}
       </nav>
 
-      <div className="admin-content-wrapper" style={{ marginLeft: 260, minHeight: "100vh" }}>
+      <div className="admin-content-wrapper" style={{ minHeight: "100vh" }}>
         <UserHeader />
         <main style={{ padding: 30 }}>{children}</main>
       </div>

@@ -13,7 +13,7 @@ export default function AdminLayout({
   return (
     <>
       <AdminSidebar />
-      <div className="admin-content-wrapper" style={{ marginLeft: 260, minHeight: "100vh" }}>
+      <div className="admin-content-wrapper" style={{ minHeight: "100vh" }}>
         <AdminHeader />
         <main style={{ padding: 30 }}>
           {children}

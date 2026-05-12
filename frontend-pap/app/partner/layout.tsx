@@ -11,7 +11,6 @@ export default function PartnerLayout({ children }: { children: React.ReactNode 
       <div
         className="partner-content-wrapper"
         style={{
-          marginLeft: 260,
           minHeight: "100vh",
         }}
       >
