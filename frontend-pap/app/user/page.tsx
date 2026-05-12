@@ -39,7 +39,7 @@ export default function UserPage() {
   const [totalRewards, setTotalRewards] = useState(0);
   const [activeMissions, setActiveMissions] = useState<Mission[]>([]);
   const [totalMissions, setTotalMissions] = useState(0);
-  const [impact, setImpact] = useState<{ co2_kg: number; energy_kwh: number; water_liters: number } | null>(null);
+  const [impact, setImpact] = useState<{ co2_kg: number; energy_kwh: number; trips: number } | null>(null);
   const [loading, setLoading] = useState(true);
   const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
   const router = useRouter();
@@ -330,9 +330,9 @@ export default function UserPage() {
             </p>
           </div>
           <div style={{ padding: 15, backgroundColor: "#dbeafe", borderRadius: 8 }}>
-            <p style={{ margin: 0, color: "#666", fontSize: 12 }}>{t("Água Economizada")}</p>
+            <p style={{ margin: 0, color: "#666", fontSize: 12 }}>{t("Viagens de Autocarro")}</p>
             <p style={{ margin: "10px 0 0 0", fontSize: 24, fontWeight: "bold", color: "#3b82f6" }}>
-              {impact ? impact.water_liters.toFixed(0) : "0"} L
+              {impact ? impact.trips : "0"}
             </p>
           </div>
         </div>
