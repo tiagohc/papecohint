@@ -168,7 +168,7 @@ export default function PartnerPage() {
   } as const;
 
   return (
-    <div style={{ display: "grid", gap: 24 }}>
+    <div style={{ display: "grid", gap: 24, minWidth: 0 }}>
 
       <section
         style={{
@@ -191,7 +191,7 @@ export default function PartnerPage() {
       </section>
 
       {/* Table — main section */}
-      <div style={{ ...shellCardStyle, padding: 24 }}>
+      <div style={{ ...shellCardStyle, padding: 24, overflow: "hidden" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18, gap: 16 }}>
           <div>
             <h3 style={{ margin: 0, fontSize: 20, color: "var(--text-main)" }}>{t("Catálogo atual")}</h3>
@@ -246,8 +246,8 @@ export default function PartnerPage() {
             {t("Ainda não tens produtos registados.")}
           </div>
         ) : (
-          <div style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+          <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch", width: "100%" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 600 }}>
               <thead>
                 <tr style={{ backgroundColor: "var(--bg-secondary, #edf3fb)" }}>
                   <th style={{ textAlign: "left", borderBottom: "1px solid var(--border)", padding: "12px 14px", fontSize: 13, fontWeight: 700, color: "var(--text-main)" }}>{t("Produto")}</th>
