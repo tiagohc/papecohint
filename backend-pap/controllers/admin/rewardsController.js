@@ -1,4 +1,5 @@
 const db = require("../../db");
+const { sendPushToAll } = require("../../services/pushNotificationService");
 
 // ============================
 // CRIAR
@@ -244,6 +245,14 @@ async function approveReward(req, res) {
     const { approveReward: approve } = require("../../models/admin/rewardsModel");
     const reward = await approve(req.params.id);
     if (!reward) return res.status(404).json({ error: "Recompensa não encontrada" });
+
+    // Notificar todos os utilizadores do novo produto disponível
+    sendPushToAll(
+      "🎁 Novo Produto Disponível!",
+      `'${reward.name}' já está na loja por ${reward.points} EcoPoints!`,
+      { type: "reward_approved" }
+    ).catch(() => {});
+
     res.json(reward);
   } catch (err) {
     console.error(err);

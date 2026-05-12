@@ -1,4 +1,5 @@
 const db = require("../../db");
+const { sendPushToAll, sendPushToUser } = require("../../services/pushNotificationService");
 
 function isMissingTableError(err, tableName) {
   return err?.code === "ER_NO_SUCH_TABLE" && String(err?.sqlMessage || "").includes(tableName);
@@ -66,6 +67,13 @@ async function createMission(req, res) {
       "SELECT id, title, description, type, access, reward_points AS points, active, verification_type, target_kwh, created_at FROM missions WHERE id = ?",
       [result.insertId]
     );
+
+    // Notificar todos os utilizadores da nova missão
+    sendPushToAll(
+      "🌿 Nova Missão Disponível!",
+      `${title} \u2014 ganha ${points} EcoPoints`,
+      { type: "new_mission", mission_id: String(result.insertId) }
+    ).catch(() => {});
 
     res.status(201).json(rows[0]);
   } catch (err) {
@@ -263,6 +271,14 @@ async function verifyMission(req, res) {
         } catch (notifErr) {
           if (!isMissingTableError(notifErr, "notifications")) throw notifErr;
         }
+
+        // Push notification
+        sendPushToUser(
+          user_id,
+          "✅ Missão Aprovada!",
+          `A tua missão '${title}' foi aprovada. +${points} EcoPoints!`,
+          { type: "mission_approved" }
+        ).catch(() => {});
       }
 
       res.json({ message: "Missão aprovada" });
