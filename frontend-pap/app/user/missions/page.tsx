@@ -567,7 +567,8 @@ export default function MissionsPage() {
             const isThisSubmitting = submitting === mission.id
               || (previewing && previewingMissionId === mission.id)
               || (uploadingInvoice && previewingInvoiceMissionId === mission.id);
-            const isLocked = !!mission.is_locked;
+            // Força missões de energia a nunca ficarem locked
+            const isLocked = mission.is_locked && !isInvoice;
 
             return (
               <div key={mission.id} style={{
@@ -661,13 +662,8 @@ export default function MissionsPage() {
 
                   {/* Action Buttons */}
                   <div style={{ marginLeft: 20 }}>
-                    {isLocked ? (
+                    ) : isLocked ? (
                       <div style={{
-                        display: "flex",
-                        flexDirection: "column",
-                        alignItems: "center",
-                        gap: 6,
-                        padding: "10px 14px",
                         backgroundColor: "#f3f4f6",
                         borderRadius: 8,
                         border: "1px dashed #9ca3af",
@@ -675,6 +671,19 @@ export default function MissionsPage() {
                         textAlign: "center",
                       }}>
                         <span style={{ fontSize: 22 }}>🔒</span>
+                        <span style={{ fontSize: 12, color: "#6b7280", lineHeight: 1.4 }}>
+                          {mission.lock_reason || t("Indisponível de momento")}
+                        </span>
+                      </div>
+                    ) : isInvoice ? (
+                      <button
+                        style={actionButtonStyle(isThisSubmitting, "#0f766e")}
+                        onClick={() => handleInvoiceSelect(mission.id)}
+                        disabled={isThisSubmitting}
+                      >
+                        {isThisSubmitting ? t("A analisar...") : t("Submeter Fatura")}
+                      </button>
+                    ) : isFirstInvoice ? (
                         <span style={{ fontSize: 12, color: "#6b7280", lineHeight: 1.4 }}>
                           {mission.lock_reason || t("Indisponível de momento")}
                         </span>
