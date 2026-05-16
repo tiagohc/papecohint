@@ -56,20 +56,8 @@ async function getUserMissions(userId, isPremium = false, lang = 'pt') {
     );
 
     // Determinar se o utilizador tem faturas confirmadas (e quando foi a primeira)
-    const firstConfirmedAt = await getFirstInvoiceConfirmedAt(userId);
-    const hasInvoice = firstConfirmedAt !== null;
-
-    const lockReasonPt = 'Submete e confirma a tua primeira fatura para desbloquear esta missão.';
-    const lockReasonEn = 'Upload and confirm your first invoice to unlock this mission.';
-
-    return missions.map(m => {
-      if (m.verification_type === 'invoice_kwh_below') {
-        if (!hasInvoice) {
-          return { ...m, is_locked: true, lock_reason: lang === 'en' ? lockReasonEn : lockReasonPt };
-        }
-      }
-      return { ...m, is_locked: false, lock_reason: null };
-    });
+    // Removido bloqueio de primeira fatura: todas as missões de energia ficam disponíveis sem exigir submissão prévia
+    return missions.map(m => ({ ...m, is_locked: false, lock_reason: null }));
   } catch (err) {
     if (isMissingTableError(err, "user_missions")) {
       const [missions] = await db.query(
