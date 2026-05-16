@@ -662,7 +662,7 @@ export default function MissionsPage() {
 
                   {/* Action Buttons */}
                   <div style={{ marginLeft: 20 }}>
-                    ) : isLocked ? (
+                    {isLocked ? (
                       <div style={{
                         backgroundColor: "#f3f4f6",
                         borderRadius: 8,
