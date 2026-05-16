@@ -1,4 +1,4 @@
-const { getUserNotifications: getNotificationsFromDB, getUserNotificationById, markNotificationAsRead, markAllNotificationsAsRead, getUnreadCount, registerFcmToken, unregisterFcmToken } = require("../../models/user/notificationsModel");
+const { getUserNotifications: getNotificationsFromDB, getUserNotificationById, markNotificationAsRead, markAllNotificationsAsRead, getUnreadCount, registerFcmToken, unregisterFcmToken, updateFcmLang } = require("../../models/user/notificationsModel");
 
 // LISTAR NOTIFICAÇÕES DO USUÁRIO
 async function getUserNotifications(req, res) {
@@ -65,10 +65,10 @@ async function markAllAsRead(req, res) {
 async function registerToken(req, res) {
   try {
     const userId = req.user.id;
-    const { token } = req.body;
+    const { token, lang } = req.body;
     if (!token) return res.status(400).json({ error: "Token em falta" });
 
-    await registerFcmToken(userId, token);
+    await registerFcmToken(userId, token, lang);
     res.json({ message: "Token registado com sucesso" });
   } catch (err) {
     console.error(err);
@@ -91,6 +91,24 @@ async function unregisterToken(req, res) {
   }
 }
 
+// ACTUALIZAR IDIOMA DOS TOKENS FCM + perfil do utilizador
+async function updateLang(req, res) {
+  try {
+    const userId = req.user.id;
+    const { lang } = req.body;
+    if (!["pt", "en"].includes(lang)) return res.status(400).json({ error: "Idioma inválido" });
+    // Guardar idioma no perfil do utilizador
+    const db = require("../../db");
+    await db.query("UPDATE users SET language = ? WHERE id = ?", [lang, userId]);
+    // Actualizar FCM tokens (falha silenciosa se tabela não existir)
+    await updateFcmLang(userId, lang).catch(() => {});
+    res.json({ message: "Idioma actualizado" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Erro ao actualizar idioma" });
+  }
+}
+
 module.exports = {
   getUserNotifications,
   getUserNotification,
@@ -98,4 +116,5 @@ module.exports = {
   markAllAsRead,
   registerToken,
   unregisterToken,
+  updateLang,
 };

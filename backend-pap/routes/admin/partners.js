@@ -312,12 +312,22 @@ router.delete("/:id", adminOnly, async (req, res) => {
   const { id } = req.params;
 
   try {
-    // First, delete all rewards associated with the partner
+    // Get all reward IDs for this partner first
+    const [rewards] = await db.query("SELECT id FROM rewards WHERE partner_id=?", [id]);
+    const rewardIds = rewards.map(r => r.id);
+
+    // Delete redemptions that reference those rewards (FK constraint)
+    if (rewardIds.length > 0) {
+      await db.query("DELETE FROM redemptions WHERE reward_id IN (?)", [rewardIds]);
+    }
+
+    // Delete the rewards
     await db.query("DELETE FROM rewards WHERE partner_id=?", [id]);
 
+    // Delete the partner user link
     await db.query("DELETE FROM partner_users WHERE partner_id=?", [id]);
 
-    // Then delete the partner
+    // Delete the partner
     const [result] = await db.query("DELETE FROM partners WHERE id=?", [id]);
 
     if (result.affectedRows === 0)
@@ -326,7 +336,7 @@ router.delete("/:id", adminOnly, async (req, res) => {
     res.json({ message: "Parceiro removido com sucesso" });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Erro no servidor" });
+    res.status(500).json({ error: "Erro ao apagar parceiro: " + err.message });
   }
 });
 

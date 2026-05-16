@@ -12,6 +12,8 @@ export default function AuthForm() {
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [registerLang, setRegisterLang] = useState<"pt" | "en">("pt");
+  const [emailSent, setEmailSent] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [langOpen, setLangOpen] = useState(false);
@@ -54,7 +56,7 @@ export default function AuthForm() {
         const res = await fetch("/api/register", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ username, email, password }),
+          body: JSON.stringify({ username, email, password, language: registerLang }),
         });
 
         if (res.status === 429) {
@@ -70,35 +72,11 @@ export default function AuthForm() {
           return;
         }
 
-        // login automático após registro
-        const loginRes = await fetch("/api/login", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, password }),
-        });
-
-        if (loginRes.status === 429) {
-          setError(t("Servidor sobrecarregado. Aguarda uns segundos e tenta novamente."));
-          setLoading(false);
-          return;
-        }
-
-        const loginData = await loginRes.json();
-        if (!loginRes.ok) {
-          setError(loginData.error || t("Erro ao entrar"));
-          setLoading(false);
-          return;
-        }
-
-        localStorage.setItem("token", loginData.token);
-        const payload = JSON.parse(atob(loginData.token.split(".")[1]));
-        if (payload.role === "admin") {
-          window.location.href = "/admin/users";
-        } else if (payload.role === "partner") {
-          window.location.href = "/partner";
-        } else {
-          window.location.href = "/user";
-        }
+        // Email de verificação enviado
+        setLanguage(registerLang);
+        setEmailSent(true);
+        setLoading(false);
+        return;
 
       } else {
         // Login
@@ -116,12 +94,20 @@ export default function AuthForm() {
 
         const data = await res.json();
         if (!res.ok) {
-          setError(data.error || t("Erro no login"));
+          if (data.requiresVerification) {
+            setError("📧 " + (data.error || "Verifica o teu email antes de iniciar sessão."));
+          } else {
+            setError(data.error || t("Erro no login"));
+          }
           setLoading(false);
           return;
         }
 
         localStorage.setItem("token", data.token);
+        // Aplicar idioma guardado na conta
+        if (data.user?.language) {
+          setLanguage(data.user.language);
+        }
         const payload = JSON.parse(atob(data.token.split(".")[1]));
         if (payload.role === "admin") {
           window.location.href = "/admin/users";
@@ -225,7 +211,43 @@ export default function AuthForm() {
         <Image src="/logoback.png" alt="EcoHint Logo" width={320} height={320} />
       </div>
 
-      <form
+      {/* Ecrã de verificação de email após registo */}
+      {emailSent ? (
+        <div style={{
+          background: "#fff",
+          borderRadius: 12,
+          padding: 32,
+          maxWidth: 320,
+          width: "100%",
+          textAlign: "center",
+          boxShadow: "0 10px 25px rgba(0,0,0,0.1)",
+        }}>
+          <div style={{ fontSize: 48, marginBottom: 12 }}>📧</div>
+          <h3 style={{ color: "#1f2937", marginBottom: 8 }}>Verifica o teu email!</h3>
+          <p style={{ color: "#6b7280", fontSize: 14, lineHeight: 1.6, marginBottom: 8 }}>
+            Enviamos um link de confirmação para <strong>{email}</strong>.
+          </p>
+          <p style={{ color: "#9ca3af", fontSize: 12, lineHeight: 1.5, marginBottom: 20 }}>
+            Clica no link para ativar a conta. Verifica também a pasta de spam.
+          </p>
+          <button
+            onClick={() => { setEmailSent(false); setIsRegister(false); }}
+            style={{
+              padding: "10px 20px",
+              backgroundColor: "#22c55e",
+              color: "#fff",
+              border: "none",
+              borderRadius: 8,
+              fontWeight: 700,
+              cursor: "pointer",
+              fontSize: 14,
+            }}
+          >
+            Ir para o Login
+          </button>
+        </div>
+      ) : (
+        <form
         onSubmit={handleSubmit}
         style={{
           display: "flex",
@@ -250,6 +272,41 @@ export default function AuthForm() {
             maxLength={30}
             style={{ padding: 12, borderRadius: 6, fontSize: 16 }}
           />
+        )}
+
+        {/* Seletor de idioma da conta (só no registo) */}
+        {isRegister && (
+          <div>
+            <p style={{ margin: "0 0 8px 0", fontSize: 12, fontWeight: 600, color: "#6b7280" }}>
+              🌐 {t("Idioma da conta")}
+            </p>
+            <div style={{ display: "flex", gap: 8 }}>
+              {([{code: "pt" as const, flag: "🇵🇹", label: "PT"}, {code: "en" as const, flag: "🇬🇧", label: "EN"}]).map((l) => (
+                <button
+                  key={l.code}
+                  type="button"
+                  onClick={() => setRegisterLang(l.code)}
+                  style={{
+                    flex: 1,
+                    padding: "8px",
+                    borderRadius: 8,
+                    border: registerLang === l.code ? "2px solid #22c55e" : "2px solid #e5e7eb",
+                    backgroundColor: registerLang === l.code ? "#f0fdf4" : "#fff",
+                    cursor: "pointer",
+                    fontWeight: registerLang === l.code ? 700 : 400,
+                    fontSize: 14,
+                    color: registerLang === l.code ? "#15803d" : "#6b7280",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 6,
+                  }}
+                >
+                  {l.flag} {l.label} {registerLang === l.code && "✓"}
+                </button>
+              ))}
+            </div>
+          </div>
         )}
 
         <input
@@ -347,6 +404,7 @@ export default function AuthForm() {
           </div>
         )}
       </form>
+      )}
     </div>
   );
 }

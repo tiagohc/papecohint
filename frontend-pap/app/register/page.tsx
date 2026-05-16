@@ -2,6 +2,14 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import PasswordStrengthIndicator from "@/components/PasswordStrengthIndicator";
+import { validatePassword } from "@/lib/passwordValidator";
+import { useLanguage } from "@/app/components/LanguageProvider";
+
+const LANGUAGES = [
+  { code: "pt" as const, label: "Português", flag: "🇵🇹" },
+  { code: "en" as const, label: "English",   flag: "🇬🇧" },
+];
 
 const inputStyle: React.CSSProperties = {
   width: "100%",
@@ -16,6 +24,18 @@ const inputStyle: React.CSSProperties = {
 export default function RegisterPage() {
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
+  const { setLanguage } = useLanguage();
+
+  const [selectedLang, setSelectedLang] = useState<"pt" | "en">("pt");
+
+  // Keep global language in sync when user picks in registration
+  const handleLangSelect = (code: "pt" | "en") => {
+    setSelectedLang(code);
+    setLanguage(code);
+  };
+
+  // Use selectedLang as the language to send to backend
+  const language = selectedLang;
 
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
@@ -24,6 +44,7 @@ export default function RegisterPage() {
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [emailSent, setEmailSent] = useState(false);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] ?? null;
@@ -41,12 +62,15 @@ export default function RegisterPage() {
     setError("");
     setLoading(true);
 
+    const pwError = validatePassword(password);
+    if (pwError) { setError(pwError); setLoading(false); return; }
+
     try {
       // 1. Register user
       const res = await fetch("/api/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, email, password }),
+        body: JSON.stringify({ username, email, password, language }),
       });
 
       if (res.status === 429) {
@@ -56,7 +80,7 @@ export default function RegisterPage() {
         const retry = await fetch("/api/register", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ username, email, password }),
+          body: JSON.stringify({ username, email, password, language }),
         });
         if (retry.status === 429) {
           setError("Servidor temporariamente sobrecarregado. Aguarda uns segundos e tenta novamente.");
@@ -69,9 +93,9 @@ export default function RegisterPage() {
           setLoading(false);
           return;
         }
-        const retryToken: string = retryData.token;
-        localStorage.setItem("token", retryToken);
-        router.push("/user");
+        // Conta criada (retry) — mostrar ecrã de verificação
+        setEmailSent(true);
+        setLoading(false);
         return;
       }
 
@@ -83,27 +107,65 @@ export default function RegisterPage() {
         return;
       }
 
-      const token: string = data.token;
-
-      // 2. Upload avatar if selected
-      if (avatarFile && token) {
-        const formData = new FormData();
-        formData.append("avatar", avatarFile);
-        await fetch("/api/user/profile/avatar", {
-          method: "POST",
-          headers: { Authorization: `Bearer ${token}` },
-          body: formData,
-        }).catch(() => {/* avatar upload failure is non-fatal */});
-      }
-
-      // 3. Store token and redirect
-      localStorage.setItem("token", token);
-      router.push("/user");
+      // Conta criada — mostrar ecrã de verificação de email
+      setEmailSent(true);
+      setLoading(false);
+      return;
     } catch {
       setError("Erro ao conectar com o servidor");
       setLoading(false);
     }
   };
+
+  // Ecrã de confirmação de email
+  if (emailSent) {
+    return (
+      <div style={{
+        minHeight: "100vh",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        background: "linear-gradient(135deg, #a5d6a7 0%, #fff59d 100%)",
+        padding: 16,
+      }}>
+        <div style={{
+          background: "#fff",
+          borderRadius: 16,
+          padding: 48,
+          maxWidth: 420,
+          width: "100%",
+          textAlign: "center",
+          boxShadow: "0 10px 30px rgba(0,0,0,0.1)",
+        }}>
+          <div style={{ fontSize: 56, marginBottom: 16 }}>📧</div>
+          <h2 style={{ color: "#1f2937", marginBottom: 8 }}>Verifica o teu email!</h2>
+          <p style={{ color: "#6b7280", marginBottom: 8, lineHeight: 1.6 }}>
+            Enviamos um email de confirmação para <strong>{email}</strong>.
+          </p>
+          <p style={{ color: "#6b7280", fontSize: 13, lineHeight: 1.5 }}>
+            Clica no link no email para ativar a tua conta.
+            Verifica também a pasta de spam.
+          </p>
+          <button
+            onClick={() => router.push("/")}
+            style={{
+              marginTop: 24,
+              padding: "11px 24px",
+              backgroundColor: "#22c55e",
+              color: "#fff",
+              border: "none",
+              borderRadius: 8,
+              fontWeight: 700,
+              cursor: "pointer",
+              fontSize: 14,
+            }}
+          >
+            Ir para o Login
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -195,13 +257,49 @@ export default function RegisterPage() {
         <label style={{ fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 4, display: "block" }}>Password</label>
         <input
           type="password"
-          placeholder="Mínimo 6 caracteres"
+          placeholder="Mínimo 8 caracteres"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
-          minLength={6}
-          style={{ ...inputStyle, marginBottom: 20 }}
+          style={{ ...inputStyle, marginBottom: 8 }}
         />
+        <PasswordStrengthIndicator password={password} />
+
+        {/* Language selector */}
+        <div style={{ marginTop: 16, marginBottom: 16 }}>
+          <label style={{ fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 8, display: "block" }}>
+            🌐 Idioma da conta / Account language
+          </label>
+          <div style={{ display: "flex", gap: 8 }}>
+            {LANGUAGES.map((lang) => (
+              <button
+                key={lang.code}
+                type="button"
+                onClick={() => handleLangSelect(lang.code)}
+                style={{
+                  flex: 1,
+                  padding: "9px 12px",
+                  borderRadius: 8,
+                  border: selectedLang === lang.code ? "2px solid #22c55e" : "2px solid #e5e7eb",
+                  backgroundColor: selectedLang === lang.code ? "#f0fdf4" : "#fff",
+                  cursor: "pointer",
+                  fontWeight: selectedLang === lang.code ? 700 : 400,
+                  fontSize: 14,
+                  color: selectedLang === lang.code ? "#15803d" : "#6b7280",
+                  transition: "all 0.15s",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 6,
+                }}
+              >
+                <span>{lang.flag}</span>
+                <span>{lang.label}</span>
+                {selectedLang === lang.code && <span style={{ marginLeft: 2 }}>✓</span>}
+              </button>
+            ))}
+          </div>
+        </div>
 
         <button
           type="submit"

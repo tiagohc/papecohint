@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const { getUserNotifications, getUserNotification, markAsRead, markAllAsRead, registerToken, unregisterToken } = require("../../controllers/user/notificationsController");
+const { getUserNotifications, getUserNotification, markAsRead, markAllAsRead, registerToken, unregisterToken, updateLang } = require("../../controllers/user/notificationsController");
 const { auth } = require("../../authMiddleware");
 
 router.use(auth);
@@ -21,6 +21,9 @@ router.get("/", getUserNotifications);
 
 // Registar FCM token
 router.post("/register-token", registerToken);
+
+// Actualizar idioma dos tokens FCM do utilizador
+router.patch("/lang", updateLang);
 
 // Remover FCM token
 router.delete("/unregister-token", unregisterToken);

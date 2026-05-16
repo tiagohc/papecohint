@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useLanguage } from "@/app/components/LanguageProvider";
+import { fixEncoding } from "@/lib/fixEncoding";
 import Modal from "@/components/Modal";
 import PartnerForm from "@/components/PartnerForm";
 import FallbackImage from "@/components/FallbackImage";
@@ -141,13 +142,20 @@ export default function PartnerPage() {
     if (!token) return;
     if (!confirm(t("Remover produto?"))) return;
 
-    const res = await fetch(`/api/partner/rewards/${id}`, {
-      method: "DELETE",
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    try {
+      const res = await fetch(`/api/partner/rewards/${id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
-    if (res.ok) {
-      loadProducts();
+      if (res.ok) {
+        loadProducts();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        alert(data?.error || `Erro ${res.status} ao apagar produto`);
+      }
+    } catch (err) {
+      alert("Erro de rede ao apagar produto");
     }
   };
 
@@ -158,8 +166,6 @@ export default function PartnerPage() {
   const averagePoints = totalProducts > 0
     ? Math.round(products.reduce((sum, product) => sum + (Number(product.points) || 0), 0) / totalProducts)
     : 0;
-  const lowStockProducts = products.filter((product) => Number(product.stock) <= 5).length;
-
   const shellCardStyle = {
     backgroundColor: "var(--bg-card)",
     borderRadius: 12,
@@ -181,7 +187,6 @@ export default function PartnerPage() {
           { label: t("Produtos"), value: totalProducts, tone: "#0f766e" },
           { label: t("Stock total"), value: totalStock, tone: "#0f766e" },
           { label: t("Média de pontos"), value: averagePoints, tone: "#7c3aed" },
-          { label: t("Stock baixo"), value: lowStockProducts, tone: "#b45309" },
         ].map((item) => (
           <div key={item.label} style={{ ...shellCardStyle, padding: 20 }}>
             <div style={{ fontSize: 13, color: "var(--text-secondary)", marginBottom: 10 }}>{item.label}</div>
@@ -268,8 +273,8 @@ export default function PartnerPage() {
                           style={{ width: 44, height: 44, objectFit: "cover", borderRadius: 8, background: "var(--bg-secondary, #f1f5f9)" }}
                         />
                         <div>
-                          <div style={{ fontWeight: 700, color: "var(--text-main)", marginBottom: 4 }}>{p.name}</div>
-                          <div style={{ color: "var(--text-secondary)", fontSize: 13 }}>{p.description || t("Sem descrição")}</div>
+                          <div style={{ fontWeight: 700, color: "var(--text-main)", marginBottom: 4 }}>{fixEncoding(p.name)}</div>
+                          <div style={{ color: "var(--text-secondary)", fontSize: 13 }}>{p.description ? fixEncoding(p.description) : t("Sem descrição")}</div>
                         </div>
                       </div>
                     </td>

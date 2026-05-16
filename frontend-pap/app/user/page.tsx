@@ -3,8 +3,9 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { carbonSavedFromPoints, getLevelFromPoints } from "@/lib/progress";
+import { carbonSavedFromPoints } from "@/lib/progress";
 import { useLanguage } from "@/app/components/LanguageProvider";
+import { fixEncoding } from "@/lib/fixEncoding";
 
 type User = {
   id: number;
@@ -28,10 +29,11 @@ type Mission = {
   points: number;
   type: string;
   verification_type?: string;
+  target_kwh?: number | null;
 };
 
 export default function UserPage() {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const [user, setUser] = useState<User | null>(null);
   const [userPoints, setUserPoints] = useState(0);
   const [isMobile, setIsMobile] = useState(false);
@@ -90,7 +92,7 @@ export default function UserPage() {
       .catch(console.error);
 
     // Get completed missions count from history
-    fetch("/api/user/missions/history", {
+    fetch(`/api/user/missions/history?lang=${language}`, {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then(r => { if (!r.ok) throw new Error(`/missions/history: ${r.status}`); return r.json(); })
@@ -101,7 +103,7 @@ export default function UserPage() {
       .catch(console.error);
 
     // Get active missions
-    fetch("/api/user/missions", {
+    fetch(`/api/user/missions?lang=${language}`, {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then(r => { if (!r.ok) throw new Error(`/missions: ${r.status}`); return r.json(); })
@@ -112,7 +114,7 @@ export default function UserPage() {
       })
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, [token, router]);
+  }, [token, router, language]);
 
   const cardStyle = {
     padding: 20,
@@ -132,7 +134,6 @@ export default function UserPage() {
     fontSize: 14,
   };
 
-  const levelInfo = getLevelFromPoints(userPoints);
   const carbonSaved = carbonSavedFromPoints(userPoints);
 
   if (loading) return <p>{t("Carregando...")}</p>;
@@ -154,7 +155,7 @@ export default function UserPage() {
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(4, 1fr)",
+          gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(3, 1fr)",
           gap: isMobile ? 10 : 15,
           marginBottom: 30,
         }}
@@ -196,15 +197,6 @@ export default function UserPage() {
           </p>
           <p style={{ margin: "4px 0 0 0", fontSize: 11, color: "#9ca3af" }}>{t("CO₂ economizado")}</p>
         </div>
-        <div style={cardStyle}>
-          <p style={{ margin: 0, color: "#666", fontSize: 12 }}>{t("NÍVEL")}</p>
-          <p style={{ margin: "10px 0 0 0", fontSize: 32, fontWeight: "bold", color: "#ec4899" }}>
-            {levelInfo.level}
-          </p>
-          <p style={{ margin: "5px 0 0 0", fontSize: 12, color: "#666" }}>
-            {t("Progresso:")} {(levelInfo.progress * 100).toFixed(0)}%
-          </p>
-        </div>
       </div>
 
       {/* Rewards — só mostra se o utilizador já tem pontos */}
@@ -244,7 +236,7 @@ export default function UserPage() {
                 backgroundColor: "#f9fafb",
               }}
             >
-              <h3 style={{ margin: "0 0 5px 0", fontSize: 16 }}>{reward.name}</h3>
+              <h3 style={{ margin: "0 0 5px 0", fontSize: 16 }}>{fixEncoding(reward.name)}</h3>
               <p style={{ margin: 0, color: "#666", fontSize: 12 }}>
                 {reward.partnerName || t("Sem parceiro")}
               </p>
@@ -302,8 +294,14 @@ export default function UserPage() {
                 style={{ padding: 15, border: "1px solid #e5e7eb", borderRadius: 8, backgroundColor: "#f9fafb", cursor: "pointer" }}
                 onClick={() => router.push("/user/missions")}
               >
-                <h3 style={{ margin: "0 0 5px 0", fontSize: 15 }}>{mission.title}</h3>
-                <p style={{ margin: "0 0 10px 0", color: "#666", fontSize: 12 }}>{mission.description}</p>
+                <h3 style={{ margin: "0 0 5px 0", fontSize: 15 }}>{fixEncoding(t(mission.title))}</h3>
+                <p style={{ margin: "0 0 10px 0", color: "#666", fontSize: 12 }}>
+                  {mission.verification_type === "invoice_kwh_below" && mission.target_kwh
+                    ? (language === "en"
+                        ? `Submit an energy invoice with consumption below ${mission.target_kwh} kWh.`
+                        : `Submete uma fatura de energia com consumo abaixo de ${mission.target_kwh} kWh.`)
+                    : fixEncoding(t(mission.description ?? ""))}
+                </p>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <span style={{ fontSize: 20, fontWeight: "bold", color: "#22c55e" }}>{mission.points} EcoPts</span>
                   <span style={{ fontSize: 11, color: "#fff", backgroundColor: mission.type === "daily" ? "#3b82f6" : "#8b5cf6", padding: "2px 8px", borderRadius: 12 }}>
@@ -322,7 +320,7 @@ export default function UserPage() {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(3, 1fr)",
+            gridTemplateColumns: "repeat(2, 1fr)",
             gap: 15,
           }}
         >
@@ -330,12 +328,6 @@ export default function UserPage() {
             <p style={{ margin: 0, color: "#666", fontSize: 12 }}>{t("CO2 Economizado")}</p>
             <p style={{ margin: "10px 0 0 0", fontSize: 24, fontWeight: "bold", color: "#22c55e" }}>
               {impact ? impact.co2_kg.toFixed(2) : "0"} kg
-            </p>
-          </div>
-          <div style={{ padding: 15, backgroundColor: "#fef3c7", borderRadius: 8 }}>
-            <p style={{ margin: 0, color: "#666", fontSize: 12 }}>{t("Árvores Plantadas")}</p>
-            <p style={{ margin: "10px 0 0 0", fontSize: 24, fontWeight: "bold", color: "#f59e0b" }}>
-              {impact ? (impact.energy_kwh > 0 ? (impact.energy_kwh / 10).toFixed(1) : "0") : "0"}
             </p>
           </div>
           <div style={{ padding: 15, backgroundColor: "#dbeafe", borderRadius: 8 }}>

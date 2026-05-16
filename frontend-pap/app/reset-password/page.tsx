@@ -3,6 +3,8 @@
 import { useSearchParams, useRouter } from "next/navigation";
 import { useState, Suspense } from "react";
 import { useLanguage } from "@/app/components/LanguageProvider";
+import PasswordStrengthIndicator from "@/components/PasswordStrengthIndicator";
+import { validatePassword } from "@/lib/passwordValidator";
 
 function ResetPasswordForm() {
   const { t } = useLanguage();
@@ -26,10 +28,8 @@ function ResetPasswordForm() {
       return;
     }
 
-    if (password.length < 6) {
-      setError(t("A password deve ter pelo menos 6 caracteres"));
-      return;
-    }
+    const pwError = validatePassword(password);
+    if (pwError) { setError(pwError); return; }
 
     if (password !== confirm) {
       setError(t("As passwords não coincidem"));
@@ -76,6 +76,7 @@ function ResetPasswordForm() {
           onChange={(e) => setPassword(e.target.value)}
           required
         />
+        <PasswordStrengthIndicator password={password} />
 
         <input
           type="password"

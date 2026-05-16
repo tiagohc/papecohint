@@ -145,19 +145,57 @@ router.delete("/:id", async (req, res) => {
   const { id } = req.params;
 
   try {
-    const [result] = await db.query(
-      "DELETE FROM rewards WHERE id = ? AND partner_id = ?",
+    // Confirm the reward belongs to this partner before deleting
+    const [rows] = await db.query(
+      "SELECT id FROM rewards WHERE id = ? AND partner_id = ?",
       [id, req.user.partner_id]
     );
 
-    if (result.affectedRows === 0) {
+    if (rows.length === 0) {
       return res.status(404).json({ error: "Produto não encontrado" });
     }
+
+    // Delete redemptions first (FK constraint)
+    await db.query("DELETE FROM redemptions WHERE reward_id = ?", [id]);
+
+    // Now delete the reward
+    await db.query("DELETE FROM rewards WHERE id = ?", [id]);
 
     res.json({ message: "Produto removido com sucesso" });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Erro ao apagar produto" });
+    res.status(500).json({ error: "Erro ao apagar produto: " + err.message });
+  }
+});
+
+// Listar resgates dos produtos deste parceiro
+router.get("/redemptions", async (req, res) => {
+  try {
+    const [rows] = await db.query(
+      `SELECT rd.id,
+              u.name AS user_name,
+              u.email AS user_email,
+              r.title AS reward_name,
+              r.id AS reward_id,
+              rd.points_used,
+              rd.full_name,
+              rd.address,
+              rd.city,
+              rd.postal_code,
+              rd.phone,
+              rd.notes,
+              rd.created_at
+       FROM redemptions rd
+       INNER JOIN users u ON u.id = rd.user_id
+       INNER JOIN rewards r ON r.id = rd.reward_id
+       WHERE r.partner_id = ?
+       ORDER BY rd.created_at DESC`,
+      [req.user.partner_id]
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Erro ao listar compras" });
   }
 });
 

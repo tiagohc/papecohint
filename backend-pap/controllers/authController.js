@@ -3,6 +3,23 @@ const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
 const nodemailer = require("nodemailer");
 const db = require("../db");
+const { validatePassword } = require("../utils/passwordValidator");
+
+// ── Nodemailer transporter (reutilizado) ─────────────────────────────────────
+function createTransporter() {
+  return nodemailer.createTransport({
+    service: "gmail",
+    auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS },
+  });
+}
+
+// Auto-migration: coluna email_verified
+db.query("ALTER TABLE users ADD COLUMN email_verified TINYINT(1) NOT NULL DEFAULT 0 AFTER email")
+  .catch(err => { if (err.code !== "ER_DUP_FIELDNAME") console.error("Migration email_verified:", err.message); });
+db.query("ALTER TABLE users ADD COLUMN email_verify_token VARCHAR(64) NULL AFTER email_verified")
+  .catch(err => { if (err.code !== "ER_DUP_FIELDNAME") console.error("Migration email_verify_token:", err.message); });
+db.query("ALTER TABLE users ADD COLUMN language VARCHAR(5) NOT NULL DEFAULT 'pt' AFTER email_verify_token")
+  .catch(err => { if (err.code !== "ER_DUP_FIELDNAME") console.error("Migration language:", err.message); });
 
 // Verificação graceful: se a tabela partner_users ainda não existir na BD,
 // o utilizador é tratado como 'user' normal em vez de lançar erro.
@@ -17,7 +34,7 @@ async function login(req, res) {
 
   try {
     const [rows] = await db.query(
-      "SELECT id, name, email, password, role, status FROM users WHERE email = ?",
+      "SELECT id, name, email, password, role, status, IFNULL(email_verified, 1) AS email_verified, IFNULL(language, 'pt') AS language FROM users WHERE email = ?",
       [email]
     );
     if (rows.length === 0) return res.status(401).json({ error: "Credenciais inválidas" });
@@ -25,6 +42,15 @@ async function login(req, res) {
     const user = rows[0];
     const match = await bcrypt.compare(password, user.password);
     if (!match) return res.status(401).json({ error: "Credenciais inválidas" });
+
+    // Bloquear login se email não verificado
+    if (!user.email_verified) {
+      return res.status(403).json({
+        error: "Verifica o teu email antes de iniciar sessão. Verifica a tua caixa de entrada.",
+        requiresVerification: true,
+      });
+    }
+
     if (user.status !== "active") return res.status(403).json({ error: "Utilizador inativo" });
 
     let partnerLinks = [];
@@ -54,7 +80,7 @@ async function login(req, res) {
 
     res.json({
       token,
-      user: { id: user.id, name: user.name, email: user.email, role: authRole, partner_id: partnerId },
+      user: { id: user.id, name: user.name, email: user.email, role: authRole, partner_id: partnerId, language: user.language },
     });
   } catch (err) {
     console.error(err);
@@ -68,11 +94,15 @@ async function login(req, res) {
 
 // REGISTER
 async function register(req, res) {
-  const { username, email, password } = req.body;
+  const { username, email, password, language } = req.body;
   if (!username || !email || !password) return res.status(400).json({ error: "Dados em falta" });
 
   // username is used as the display name too
   const name = username;
+  const userLanguage = ["pt", "en"].includes(language) ? language : "pt";
+
+  const pwCheck = validatePassword(password);
+  if (!pwCheck.valid) return res.status(400).json({ error: pwCheck.error });
 
   try {
     const [existing] = await db.query("SELECT id FROM users WHERE email = ?", [email]);
@@ -83,19 +113,42 @@ async function register(req, res) {
     if (existingUsername.length > 0) return res.status(409).json({ error: "Username já existe" });
 
     const hashedPassword = await bcrypt.hash(password, 10);
+    const verifyToken = crypto.randomBytes(32).toString("hex");
+
     const [result] = await db.query(
-      "INSERT INTO users (name, username, email, password, role, status) VALUES (?, ?, ?, ?, 'user', 'active')",
-      [name, username, email, hashedPassword]
+      "INSERT INTO users (name, username, email, password, role, status, email_verified, email_verify_token, language) VALUES (?, ?, ?, ?, 'user', 'active', 0, ?, ?)",
+      [name, username, email, hashedPassword, verifyToken, userLanguage]
     );
 
-    // login automático após registro
-    const token = jwt.sign(
-      { id: result.insertId, email, role: "user" },
-      process.env.JWT_SECRET,
-      { expiresIn: "1d" }
-    );
+    // Enviar email de verificação
+    try {
+      const baseUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+      const verifyLink = `${baseUrl}/verify-email?token=${verifyToken}`;
+      const transporter = createTransporter();
+      await transporter.sendMail({
+        from: `"EcoHint" <${process.env.EMAIL_USER}>`,
+        to: email,
+        subject: "Confirma o teu email — EcoHint",
+        html: `
+          <div style="font-family:sans-serif;max-width:480px;margin:0 auto">
+            <h2 style="color:#22c55e">🌱 Bem-vindo ao EcoHint!</h2>
+            <p>Olá <strong>${username}</strong>,</p>
+            <p>Clica no botão abaixo para confirmar o teu email e ativar a conta:</p>
+            <a href="${verifyLink}" style="display:inline-block;padding:12px 24px;background:#22c55e;color:#fff;border-radius:8px;text-decoration:none;font-weight:bold;margin:16px 0">
+              Confirmar Email
+            </a>
+            <p style="color:#666;font-size:12px">Se não criaste esta conta, ignora este email.</p>
+          </div>`,
+      });
+    } catch (mailErr) {
+      console.error("Erro ao enviar email de verificação:", mailErr.message);
+      // Não falhar o registo por causa do email
+    }
 
-    res.status(201).json({ message: "Conta criada com sucesso", token });
+    res.status(201).json({
+      message: "Conta criada! Verifica o teu email para ativar a conta.",
+      requiresVerification: true,
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({
@@ -103,6 +156,31 @@ async function register(req, res) {
       details: err.message,
       stack: err.stack,
     });
+  }
+}
+
+// VERIFY EMAIL
+async function verifyEmail(req, res) {
+  const { token } = req.query;
+  if (!token) return res.status(400).json({ error: "Token em falta" });
+  try {
+    const [rows] = await db.query(
+      "SELECT id FROM users WHERE email_verify_token = ? AND email_verified = 0",
+      [token]
+    );
+    if (rows.length === 0) return res.status(400).json({ error: "Token inválido ou já utilizado" });
+    await db.query(
+      "UPDATE users SET email_verified = 1, email_verify_token = NULL WHERE id = ?",
+      [rows[0].id]
+    );
+    // Auto-login após verificação
+    const [userRows] = await db.query("SELECT id, email, role FROM users WHERE id = ?", [rows[0].id]);
+    const u = userRows[0];
+    const jwtToken = jwt.sign({ id: u.id, email: u.email, role: u.role }, process.env.JWT_SECRET, { expiresIn: "1d" });
+    res.json({ message: "Email confirmado com sucesso!", token: jwtToken });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Erro no servidor" });
   }
 }
 
@@ -154,6 +232,9 @@ async function resetPassword(req, res) {
   const { token, password } = req.body;
   if (!token || !password) return res.status(400).json({ error: "Dados em falta" });
 
+  const pwCheck = validatePassword(password);
+  if (!pwCheck.valid) return res.status(400).json({ error: pwCheck.error });
+
   try {
     const [rows] = await db.query(
       "SELECT id, reset_token_expires FROM users WHERE reset_token = ?",
@@ -179,4 +260,4 @@ async function resetPassword(req, res) {
   }
 }
 
-module.exports = { login, register, forgotPassword, resetPassword };
+module.exports = { login, register, forgotPassword, resetPassword, verifyEmail };

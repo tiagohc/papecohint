@@ -272,6 +272,35 @@ async function rejectReward(req, res) {
   }
 }
 
+async function getRedemptions(req, res) {
+  try {
+    const [rows] = await db.query(
+      `SELECT rd.id,
+              rd.user_id,
+              u.name AS user_name,
+              u.email AS user_email,
+              r.title AS reward_name,
+              r.id AS reward_id,
+              rd.points_used,
+              rd.full_name,
+              rd.address,
+              rd.city,
+              rd.postal_code,
+              rd.phone,
+              rd.notes,
+              rd.created_at
+       FROM redemptions rd
+       INNER JOIN users u ON u.id = rd.user_id
+       INNER JOIN rewards r ON r.id = rd.reward_id
+       ORDER BY rd.created_at DESC`
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error("GET REDEMPTIONS ERROR:", err);
+    res.status(500).json({ error: "Erro ao listar compras" });
+  }
+}
+
 module.exports = {
   createReward,
   getRewards,
@@ -281,4 +310,5 @@ module.exports = {
   getPendingRewards,
   approveReward,
   rejectReward,
+  getRedemptions,
 };

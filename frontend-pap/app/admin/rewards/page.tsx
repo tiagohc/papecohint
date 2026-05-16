@@ -26,10 +26,27 @@ type Reward = {
   status: string;
 };
 
+type Redemption = {
+  id: number;
+  user_name: string;
+  user_email: string;
+  reward_name: string;
+  points_used: number;
+  full_name: string | null;
+  address: string | null;
+  city: string | null;
+  postal_code: string | null;
+  phone: string | null;
+  notes: string | null;
+  created_at: string;
+};
+
 export default function AdminRewards() {
   const { t } = useLanguage();
   const [rewards, setRewards] = useState<Reward[]>([]);
   const [pending, setPending] = useState<Reward[]>([]);
+  const [redemptions, setRedemptions] = useState<Redemption[]>([]);
+  const [selectedRedemption, setSelectedRedemption] = useState<Redemption | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
   const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
@@ -40,14 +57,17 @@ export default function AdminRewards() {
       return;
     }
     try {
-      const [resAll, resPending] = await Promise.all([
+      const [resAll, resPending, resRedemptions] = await Promise.all([
         fetch("/api/admin/rewards", { headers: { Authorization: `Bearer ${token}` } }),
         fetch("/api/admin/rewards/pending", { headers: { Authorization: `Bearer ${token}` } }),
+        fetch("/api/admin/rewards/redemptions", { headers: { Authorization: `Bearer ${token}` } }),
       ]);
       const dataAll = await resAll.json();
       const dataPending = await resPending.json();
+      const dataRedemptions = await resRedemptions.json();
       setRewards(Array.isArray(dataAll) ? dataAll : []);
       setPending(Array.isArray(dataPending) ? dataPending : []);
+      setRedemptions(Array.isArray(dataRedemptions) ? dataRedemptions : []);
       setLoading(false);
     } catch (err) {
       console.error("fetchRewards failed", err);
@@ -217,6 +237,87 @@ export default function AdminRewards() {
           </tbody>
         </table>
       </div>
+
+      {/* Compras / Resgates */}
+      <h2 style={{ marginTop: 40, marginBottom: 12, fontSize: 18 }}>{t("Compras de Produtos")}</h2>
+      {redemptions.length === 0 ? (
+        <p style={{ color: "#6b7280" }}>{t("Sem compras registadas.")}</p>
+      ) : (
+        <div style={adminTableContainerStyle}>
+          <table style={adminTableStyle}>
+            <thead>
+              <tr style={adminTableHeadRowStyle}>
+                <th style={adminTableHeaderCellStyle}>{t("Data")}</th>
+                <th style={adminTableHeaderCellStyle}>{t("Utilizador")}</th>
+                <th style={adminTableHeaderCellStyle}>{t("Produto")}</th>
+                <th style={adminTableHeaderCellStyle}>{t("Pontos")}</th>
+                <th style={adminTableHeaderCellStyle}>{t("Morada")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {redemptions.map((rd, i) => (
+                <tr key={rd.id} style={adminTableRowStyle(i)}>
+                  <td style={adminTableCellStyle}>{new Date(rd.created_at).toLocaleString("pt-PT")}</td>
+                  <td style={adminTableCellStyle}>
+                    <div style={{ fontWeight: 600 }}>{rd.user_name}</div>
+                    <div style={{ fontSize: 12, color: "#6b7280" }}>{rd.user_email}</div>
+                  </td>
+                  <td style={adminTableCellStyle}>{rd.reward_name}</td>
+                  <td style={adminTableCellStyle}>{rd.points_used}</td>
+                  <td style={adminTableCellStyle}>
+                    {rd.full_name ? (
+                      <button
+                        onClick={() => setSelectedRedemption(rd)}
+                        style={{ background: "none", border: "none", color: "#3b82f6", cursor: "pointer", textDecoration: "underline", fontSize: 13, padding: 0 }}
+                      >
+                        {rd.full_name}
+                      </button>
+                    ) : "—"}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Modal detalhe morada */}
+      {selectedRedemption && (
+        <div style={{ position: "fixed", inset: 0, backgroundColor: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}
+          onClick={() => setSelectedRedemption(null)}>
+          <div style={{ backgroundColor: "#fff", borderRadius: 12, padding: 32, minWidth: 360, maxWidth: 480, boxShadow: "0 20px 60px rgba(0,0,0,0.3)" }}
+            onClick={e => e.stopPropagation()}>
+            <h3 style={{ margin: "0 0 20px 0", fontSize: 18 }}>{t("Detalhes da Compra")}</h3>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
+              <tbody>
+                {[
+                  [t("Produto"), selectedRedemption.reward_name],
+                  [t("Pontos gastos"), selectedRedemption.points_used],
+                  [t("Utilizador"), `${selectedRedemption.user_name} (${selectedRedemption.user_email})`],
+                  [t("Nome completo"), selectedRedemption.full_name],
+                  [t("Morada"), selectedRedemption.address],
+                  [t("Cidade"), selectedRedemption.city],
+                  [t("Código Postal"), selectedRedemption.postal_code],
+                  [t("Telefone"), selectedRedemption.phone || "—"],
+                  [t("Notas"), selectedRedemption.notes || "—"],
+                  [t("Data"), new Date(selectedRedemption.created_at).toLocaleString("pt-PT")],
+                ].map(([label, value]) => (
+                  <tr key={String(label)} style={{ borderBottom: "1px solid #f3f4f6" }}>
+                    <td style={{ padding: "8px 0", fontWeight: 600, color: "#374151", width: "40%" }}>{label}</td>
+                    <td style={{ padding: "8px 0", color: "#4b5563" }}>{value}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <button
+              onClick={() => setSelectedRedemption(null)}
+              style={{ marginTop: 24, padding: "10px 24px", backgroundColor: "#3b82f6", color: "#fff", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600 }}
+            >
+              {t("Fechar")}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

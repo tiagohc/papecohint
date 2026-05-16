@@ -1,5 +1,5 @@
 const db = require("../../db");
-const { sendPushToAll, sendPushToUser } = require("../../services/pushNotificationService");
+const { sendPushToAll, sendPushToAllLocalized, sendPushToUser } = require("../../services/pushNotificationService");
 
 function isMissingTableError(err, tableName) {
   return err?.code === "ER_NO_SUCH_TABLE" && String(err?.sqlMessage || "").includes(tableName);
@@ -11,12 +11,21 @@ function isMissingTableError(err, tableName) {
 async function getMissions(req, res) {
   try {
     const [missions] = await db.query(
-      `SELECT id, title, description, type, access, reward_points AS points, active, verification_type, target_kwh, created_at
+      `SELECT id, title, title_en, description, description_en, type, access, reward_points AS points, active, verification_type, target_kwh, created_at
        FROM missions
        ORDER BY created_at DESC`
     );
     res.json(missions);
   } catch (err) {
+    if (err.code === 'ER_BAD_FIELD_ERROR') {
+      // colunas title_en/description_en ainda não existem — retorna sem elas
+      const [missions] = await db.query(
+        `SELECT id, title, NULL AS title_en, description, NULL AS description_en, type, access, reward_points AS points, active, verification_type, target_kwh, created_at
+         FROM missions
+         ORDER BY created_at DESC`
+      );
+      return res.json(missions);
+    }
     console.error(err);
     res.status(500).json({ error: "Erro ao listar missões" });
   }
@@ -29,12 +38,20 @@ async function getMission(req, res) {
   const { id } = req.params;
   try {
     const [rows] = await db.query(
-      "SELECT id, title, description, type, access, reward_points AS points, active, verification_type, target_kwh, created_at FROM missions WHERE id = ?",
+      "SELECT id, title, title_en, description, description_en, type, access, reward_points AS points, active, verification_type, target_kwh, created_at FROM missions WHERE id = ?",
       [id]
     );
     if (rows.length === 0) return res.status(404).json({ error: "Missão não encontrada" });
     res.json(rows[0]);
   } catch (err) {
+    if (err.code === 'ER_BAD_FIELD_ERROR') {
+      const [rows] = await db.query(
+        "SELECT id, title, NULL AS title_en, description, NULL AS description_en, type, access, reward_points AS points, active, verification_type, target_kwh, created_at FROM missions WHERE id = ?",
+        [id]
+      );
+      if (rows.length === 0) return res.status(404).json({ error: "Missão não encontrada" });
+      return res.json(rows[0]);
+    }
     console.error(err);
     res.status(500).json({ error: "Erro ao obter missão" });
   }
@@ -44,39 +61,61 @@ async function getMission(req, res) {
 // CRIAR MISSÃO
 // ============================
 async function createMission(req, res) {
-  const { title, description, type, points, access, verification_type, target_kwh } = req.body;
+  const { title, title_en, description, description_en, type, points, access, verification_type, target_kwh } = req.body;
 
   if (!title || !points) {
     return res.status(400).json({ error: "Título e pontos são obrigatórios" });
   }
 
   const missionAccess = access === "premium" ? "premium" : "free";
-  const verType = ["photo", "invoice_kwh_below", "invoice_kwh_reduce", "transport_ticket"].includes(verification_type)
+  const verType = ["photo", "invoice_kwh_below", "transport_ticket"].includes(verification_type)
     ? verification_type
     : "photo";
   const targetKwh = verType === "invoice_kwh_below" && target_kwh ? Number(target_kwh) : null;
 
   try {
     const [result] = await db.query(
-      `INSERT INTO missions (title, description, type, reward_points, access, active, verification_type, target_kwh)
-       VALUES (?, ?, ?, ?, ?, 1, ?, ?)`,
-      [title, description || "", type || "daily", Number(points), missionAccess, verType, targetKwh]
+      `INSERT INTO missions (title, title_en, description, description_en, type, reward_points, access, active, verification_type, target_kwh)
+       VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?)`,
+      [title, title_en || null, description || "", description_en || null, type || "daily", Number(points), missionAccess, verType, targetKwh]
     );
 
     const [rows] = await db.query(
-      "SELECT id, title, description, type, access, reward_points AS points, active, verification_type, target_kwh, created_at FROM missions WHERE id = ?",
+      "SELECT id, title, title_en, description, description_en, type, access, reward_points AS points, active, verification_type, target_kwh, created_at FROM missions WHERE id = ?",
       [result.insertId]
     );
 
     // Notificar todos os utilizadores da nova missão
-    sendPushToAll(
+    sendPushToAllLocalized(
       "🌿 Nova Missão Disponível!",
       `${title} \u2014 ganha ${points} EcoPoints`,
+      "🌿 New Mission Available!",
+      `${title_en || title} \u2014 earn ${points} EcoPoints`,
       { type: "new_mission", mission_id: String(result.insertId) }
     ).catch(() => {});
 
     res.status(201).json(rows[0]);
   } catch (err) {
+    if (err.code === 'ER_BAD_FIELD_ERROR') {
+      // colunas title_en/description_en ainda não existem — inserir sem elas
+      const [result] = await db.query(
+        `INSERT INTO missions (title, description, type, reward_points, access, active, verification_type, target_kwh)
+         VALUES (?, ?, ?, ?, ?, 1, ?, ?)`,
+        [title, description || "", type || "daily", Number(points), missionAccess, verType, targetKwh]
+      );
+      const [rows] = await db.query(
+        "SELECT id, title, NULL AS title_en, description, NULL AS description_en, type, access, reward_points AS points, active, verification_type, target_kwh, created_at FROM missions WHERE id = ?",
+        [result.insertId]
+      );
+      sendPushToAllLocalized(
+        "🌿 Nova Missão Disponível!",
+        `${title} \u2014 ganha ${points} EcoPoints`,
+        "🌿 New Mission Available!",
+        `${title} \u2014 earn ${points} EcoPoints`,
+        { type: "new_mission", mission_id: String(result.insertId) }
+      ).catch(() => {});
+      return res.status(201).json(rows[0]);
+    }
     console.error(err);
     res.status(500).json({ error: "Erro ao criar missão" });
   }
@@ -87,19 +126,21 @@ async function createMission(req, res) {
 // ============================
 async function updateMission(req, res) {
   const { id } = req.params;
-  const { title, description, type, points, active, access, verification_type, target_kwh } = req.body;
+  const { title, title_en, description, description_en, type, points, active, access, verification_type, target_kwh } = req.body;
 
   const setClauses = [];
   const values = [];
 
-  if (title !== undefined)             { setClauses.push("title = ?");              values.push(title); }
-  if (description !== undefined)       { setClauses.push("description = ?");        values.push(description); }
-  if (type !== undefined)              { setClauses.push("type = ?");               values.push(type); }
-  if (points !== undefined)            { setClauses.push("reward_points = ?");      values.push(Number(points)); }
-  if (active !== undefined)            { setClauses.push("active = ?");             values.push(active ? 1 : 0); }
-  if (access !== undefined)            { setClauses.push("access = ?");             values.push(access === "premium" ? "premium" : "free"); }
-  if (verification_type !== undefined) { setClauses.push("verification_type = ?"); values.push(verification_type); }
-  if (target_kwh !== undefined)        { setClauses.push("target_kwh = ?");        values.push(target_kwh !== null ? Number(target_kwh) : null); }
+  if (title !== undefined)              { setClauses.push("title = ?");              values.push(title); }
+  if (title_en !== undefined)           { setClauses.push("title_en = ?");           values.push(title_en || null); }
+  if (description !== undefined)        { setClauses.push("description = ?");        values.push(description); }
+  if (description_en !== undefined)     { setClauses.push("description_en = ?");     values.push(description_en || null); }
+  if (type !== undefined)               { setClauses.push("type = ?");               values.push(type); }
+  if (points !== undefined)             { setClauses.push("reward_points = ?");      values.push(Number(points)); }
+  if (active !== undefined)             { setClauses.push("active = ?");             values.push(active ? 1 : 0); }
+  if (access !== undefined)             { setClauses.push("access = ?");             values.push(access === "premium" ? "premium" : "free"); }
+  if (verification_type !== undefined)  { setClauses.push("verification_type = ?"); values.push(verification_type); }
+  if (target_kwh !== undefined)         { setClauses.push("target_kwh = ?");        values.push(target_kwh !== null ? Number(target_kwh) : null); }
 
   if (setClauses.length === 0) {
     return res.status(400).json({ error: "Nenhum campo para atualizar" });
@@ -116,12 +157,34 @@ async function updateMission(req, res) {
     if (result.affectedRows === 0) return res.status(404).json({ error: "Missão não encontrada" });
 
     const [rows] = await db.query(
-      "SELECT id, title, description, type, access, reward_points AS points, active, verification_type, target_kwh, created_at FROM missions WHERE id = ?",
+      "SELECT id, title, title_en, description, description_en, type, access, reward_points AS points, active, verification_type, target_kwh, created_at FROM missions WHERE id = ?",
       [id]
     );
 
     res.json(rows[0]);
   } catch (err) {
+    if (err.code === 'ER_BAD_FIELD_ERROR') {
+      // colunas title_en/description_en ainda não existem — guardar sem elas
+      const safeSetClauses = setClauses.filter(c => !c.startsWith("title_en") && !c.startsWith("description_en"));
+      const safeValues = [];
+      if (title !== undefined) safeValues.push(title);
+      if (description !== undefined) safeValues.push(description);
+      if (type !== undefined) safeValues.push(type);
+      if (points !== undefined) safeValues.push(Number(points));
+      if (active !== undefined) safeValues.push(active ? 1 : 0);
+      if (access !== undefined) safeValues.push(access === "premium" ? "premium" : "free");
+      if (verification_type !== undefined) safeValues.push(verification_type);
+      if (target_kwh !== undefined) safeValues.push(target_kwh !== null ? Number(target_kwh) : null);
+      safeValues.push(id);
+      if (safeSetClauses.length > 0) {
+        await db.query(`UPDATE missions SET ${safeSetClauses.join(", ")} WHERE id = ?`, safeValues);
+      }
+      const [rows] = await db.query(
+        "SELECT id, title, NULL AS title_en, description, NULL AS description_en, type, access, reward_points AS points, active, verification_type, target_kwh, created_at FROM missions WHERE id = ?",
+        [id]
+      );
+      return res.json(rows[0]);
+    }
     console.error(err);
     res.status(500).json({ error: "Erro ao atualizar missão" });
   }
@@ -399,10 +462,17 @@ async function duplicateMission(req, res) {
     );
     if (rows.length === 0) return res.status(404).json({ error: "Missão não encontrada" });
     const m = rows[0];
+    
+    // Validar verification_type e remover tipos descontinuados
+    let verType = m.verification_type;
+    if (verType === "invoice_kwh_reduce") {
+      verType = "invoice_kwh_below"; // fallback para tipo válido
+    }
+    
     const [result] = await db.query(
       `INSERT INTO missions (title, description, type, reward_points, access, active, verification_type, target_kwh, created_at)
        VALUES (?, ?, ?, ?, ?, 1, ?, ?, NOW())`,
-      [m.title, m.description, m.type, m.reward_points, m.access, m.verification_type, m.target_kwh]
+      [m.title, m.description || null, m.type, m.reward_points, m.access, verType, m.target_kwh]
     );
     const [newRows] = await db.query(
       "SELECT id, title, description, type, access, reward_points AS points, active, verification_type, target_kwh, created_at FROM missions WHERE id = ?",

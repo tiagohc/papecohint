@@ -43,7 +43,7 @@ export default function ImpactoAmbientalPage() {
       unit: "kg",
       color: "#22c55e",
       description: (impact?.trips ?? 0) > 0
-        ? t(`${impact!.trips} viagem(ns) de autocarro vs carro (130g CO₂/km poupados)`)
+        ? `${impact!.trips} ${t("viagem(ns) de autocarro registada(s).")}`
         : t("Sem viagens registadas ainda. Submete bilhetes de transporte público."),
     },
     {

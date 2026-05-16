@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { translations, Language } from '../../lib/translations';
 
 interface LanguageContextType {
@@ -20,17 +20,29 @@ export const useLanguage = () => {
 };
 
 export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [language, setLanguageState] = useState<Language>(() => {
-    if (typeof window !== 'undefined') {
-      return (localStorage.getItem('language') as Language) || 'pt';
+  const [language, setLanguageState] = useState<Language>('pt');
+
+  useEffect(() => {
+    const stored = localStorage.getItem('language') as Language | null;
+    if (stored && stored !== language) {
+      setLanguageState(stored);
     }
-    return 'pt';
-  });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const setLanguage = (lang: Language) => {
     setLanguageState(lang);
     if (typeof window !== 'undefined') {
       localStorage.setItem('language', lang);
+      // Sync language to backend so push notifications arrive in the right language
+      const token = localStorage.getItem('token');
+      if (token) {
+        fetch('/api/user/notifications/lang', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ lang }),
+        }).catch(() => {});
+      }
     }
   };
 

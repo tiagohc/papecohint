@@ -18,6 +18,8 @@ export default function PerfilPage() {
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState({ name: "" });
   const [isLoading, setIsLoading] = useState(false);
+  const [avatarLoading, setAvatarLoading] = useState(false);
+  const [avatarError, setAvatarError] = useState<string | null>(null);
 
   // Token lido uma vez no mount — não muda durante a sessão
   const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
@@ -47,15 +49,35 @@ export default function PerfilPage() {
   const handleAvatarChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file || !token) return;
+    setAvatarLoading(true);
+    setAvatarError(null);
 
-    const formData = new FormData();
-    formData.append("avatar", file);
+    // Resize to max 300×300 and convert to base64 (persists on Render - no disk storage)
+    const base64 = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const maxSize = 300;
+          const scale = Math.min(maxSize / img.width, maxSize / img.height, 1);
+          const canvas = document.createElement("canvas");
+          canvas.width = Math.round(img.width * scale);
+          canvas.height = Math.round(img.height * scale);
+          canvas.getContext("2d")!.drawImage(img, 0, 0, canvas.width, canvas.height);
+          resolve(canvas.toDataURL("image/jpeg", 0.8));
+        };
+        img.onerror = reject;
+        img.src = e.target?.result as string;
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
 
     try {
       const res = await fetch("/api/user/profile/avatar", {
         method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-        body: formData,
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ base64 }),
       });
       if (!res.ok) throw new Error("Erro ao enviar avatar");
       const data = await res.json();
@@ -64,6 +86,9 @@ export default function PerfilPage() {
       window.dispatchEvent(new Event("profile-updated"));
     } catch (err) {
       console.error("Erro ao actualizar avatar:", err);
+      setAvatarError(t("Erro ao guardar foto. Tenta novamente."));
+    } finally {
+      setAvatarLoading(false);
     }
   };
 
@@ -92,7 +117,7 @@ export default function PerfilPage() {
   const cardStyle: React.CSSProperties = {
     padding: 20,
     borderRadius: 8,
-    backgroundColor: "#fff",
+    backgroundColor: "var(--bg-card, #fff)",
     boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
     marginBottom: 20,
   };
@@ -163,7 +188,7 @@ export default function PerfilPage() {
               }}
               title={t("Alterar foto de perfil")}
             >
-              +
+              {avatarLoading ? "…" : "+"}
             </label>
             <input
               id="avatar-input"
@@ -171,7 +196,11 @@ export default function PerfilPage() {
               accept="image/*"
               onChange={handleAvatarChange}
               style={{ display: "none" }}
+              disabled={avatarLoading}
             />
+            {avatarError && (
+              <p style={{ color: "#ef4444", fontSize: 12, margin: "6px 0 0 0", textAlign: "center" }}>{avatarError}</p>
+            )}
           </div>
 
           {/* Informações do Usuário */}
@@ -270,7 +299,7 @@ export default function PerfilPage() {
       {/* Sobre a EcoHint */}
       <div style={cardStyle}>
         <h2 style={{ margin: "0 0 16px 0", color: "#22c55e" }}>🌱 {t("O que é a EcoHint?")}</h2>
-        <p style={{ margin: "0 0 12px 0", color: "#374151", lineHeight: 1.7 }}>
+        <p style={{ margin: "0 0 12px 0", color: "var(--text-main, #374151)", lineHeight: 1.7 }}>
           {t("A EcoHint é uma plataforma que te recompensa por adotares comportamentos sustentáveis no dia a dia. Completa missões ecológicas, ganha EcoPts e troca-os por produtos e descontos dos nossos parceiros.")}
         </p>
       </div>
@@ -285,11 +314,11 @@ export default function PerfilPage() {
             { icon: "🛒", title: t("Resgata Recompensas"), desc: t("Vai à Loja de Pontos e troca os teus EcoPts por produtos reais dos parceiros EcoHint.") },
             { icon: "📊", title: t("Acompanha o teu Impacto"), desc: t("Na secção Impacto Ambiental podes ver o CO₂ que poupaste, as viagens de autocarro e muito mais.") },
           ].map((item, i) => (
-            <div key={i} style={{ display: "flex", gap: 14, alignItems: "flex-start", padding: "12px 14px", backgroundColor: "#f9fafb", borderRadius: 8 }}>
+            <div key={i} style={{ display: "flex", gap: 14, alignItems: "flex-start", padding: "12px 14px", backgroundColor: "var(--bg-secondary, #f9fafb)", borderRadius: 8 }}>
               <span style={{ fontSize: 22, lineHeight: 1 }}>{item.icon}</span>
               <div>
-                <p style={{ margin: "0 0 4px 0", fontWeight: 600, color: "#1f2937" }}>{item.title}</p>
-                <p style={{ margin: 0, fontSize: 13, color: "#6b7280", lineHeight: 1.5 }}>{item.desc}</p>
+                <p style={{ margin: "0 0 4px 0", fontWeight: 600, color: "var(--text-main, #1f2937)" }}>{item.title}</p>
+                <p style={{ margin: 0, fontSize: 13, color: "var(--text-secondary, #6b7280)", lineHeight: 1.5 }}>{item.desc}</p>
               </div>
             </div>
           ))}
@@ -299,7 +328,7 @@ export default function PerfilPage() {
       {/* Regras */}
       <div style={cardStyle}>
         <h2 style={{ margin: "0 0 16px 0" }}>📌 {t("Regras e Notas")}</h2>
-        <ul style={{ margin: 0, paddingLeft: 20, color: "#374151", lineHeight: 2, fontSize: 14 }}>
+        <ul style={{ margin: 0, paddingLeft: 20, color: "var(--text-main, #374151)", lineHeight: 2, fontSize: 14 }}>
           <li>{t("Cada missão só pode ser submetida uma vez por período (diária ou mensal).")}</li>
           <li>{t("As submissões de foto ou bilhete são verificadas manualmente por um administrador.")}</li>
           <li>{t("Os EcoPts não têm prazo de validade enquanto a conta estiver ativa.")}</li>

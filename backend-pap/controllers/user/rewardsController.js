@@ -1,4 +1,6 @@
 const { getUserPoints: getPointsFromDB, getAvailableRewards: getRewardsFromDB, getRewardById, deductPoints, recordRedemption } = require("../../models/user/rewardsModel");
+const { sendPushToAdmins, sendPushToPartnerUsers } = require("../../services/pushNotificationService");
+const db = require("../../db");
 
 // OBTER PONTOS DO USUÁRIO
 async function getUserPoints(req, res) {
@@ -40,12 +42,42 @@ async function redeemReward(req, res) {
     if (reward.stock <= 0) return res.status(400).json({ error: "Esta recompensa está esgotada." });
 
     const userPoints = await getPointsFromDB(userId);
-    if (userPoints < reward.points_required) {
-      return res.status(400).json({ error: `Pontos insuficientes. Precisas de ${reward.points_required} pts e tens ${userPoints} pts.` });
+    const numUserPoints = Number(userPoints) || 0;
+    const numRequired = Number(reward.points_required) || 0;
+    if (numUserPoints < numRequired) {
+      return res.status(400).json({ error: `Pontos insuficientes. Precisas de ${numRequired} pts e tens ${numUserPoints} pts.` });
     }
 
-    await deductPoints(userId, reward.points_required);
-    await recordRedemption(userId, rewardId, reward.points_required, { full_name, address, city, postal_code, phone, notes });
+    await deductPoints(userId, numRequired);
+    await recordRedemption(userId, rewardId, numRequired, { full_name, address, city, postal_code, phone, notes });
+
+    // Get user name for notification
+    let userName = "Utilizador";
+    try {
+      const [rows] = await db.query("SELECT name FROM users WHERE id = ?", [userId]);
+      if (rows.length > 0) userName = rows[0].name;
+    } catch (_) {}
+
+    // Notify admins
+    sendPushToAdmins(
+      "🛍️ Nova compra de produto",
+      `${userName} resgatou "${reward.name}" (${numRequired} pts)`
+    ).catch(() => {});
+
+    // Notify partner if reward has a partner
+    if (reward.partner_id) {
+      // Get full reward with partner_id from admin model
+      const [rewardRows] = await db.query(
+        "SELECT partner_id FROM rewards WHERE id = ?",
+        [rewardId]
+      ).catch(() => [[]]);
+      const pid = rewardRows?.[0]?.partner_id ?? reward.partner_id;
+      sendPushToPartnerUsers(
+        pid,
+        "🛍️ Produto resgatado",
+        `${userName} resgatou o teu produto "${reward.name}"`
+      ).catch(() => {});
+    }
 
     res.json({ 
       message: "Recompensa resgatada com sucesso! Receberás o produto na morada indicada.",

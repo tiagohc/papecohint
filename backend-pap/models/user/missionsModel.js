@@ -10,19 +10,27 @@ function isMissingTableError(err, tableName) {
 }
 
 // Listar missões ativas com estado do utilizador
-async function getUserMissions(userId, isPremium = false) {
+async function getUserMissions(userId, isPremium = false, lang = 'pt') {
   const accessFilter = isPremium
     ? ""
     : "AND m.access = 'free'";
 
+  const titleCol = lang === 'en'
+    ? "COALESCE(NULLIF(m.title_en, ''), m.title)"
+    : "m.title";
+  const descCol = lang === 'en'
+    ? "COALESCE(NULLIF(m.description_en, ''), m.description)"
+    : "m.description";
+
   try {
     const [missions] = await db.query(
       `SELECT m.id,
-              m.title,
-              m.description,
+              ${titleCol} AS title,
+              ${descCol} AS description,
               m.type,
               m.access,
               IFNULL(m.verification_type, 'photo') AS verification_type,
+              m.target_kwh,
               m.reward_points AS points,
               m.created_at,
               CASE
@@ -41,20 +49,37 @@ async function getUserMissions(userId, isPremium = false) {
              AND um.user_id = ?
        WHERE m.active = 1
        AND ${MISSION_AVAILABILITY_CONDITION}
+       AND m.verification_type != 'invoice_kwh_reduce'
        ${accessFilter}
        ORDER BY m.created_at DESC`,
       [userId]
     );
-    return missions;
+
+    // Determinar se o utilizador tem faturas confirmadas (e quando foi a primeira)
+    const firstConfirmedAt = await getFirstInvoiceConfirmedAt(userId);
+    const hasInvoice = firstConfirmedAt !== null;
+
+    const lockReasonPt = 'Submete e confirma a tua primeira fatura para desbloquear esta missão.';
+    const lockReasonEn = 'Upload and confirm your first invoice to unlock this mission.';
+
+    return missions.map(m => {
+      if (m.verification_type === 'invoice_kwh_below') {
+        if (!hasInvoice) {
+          return { ...m, is_locked: true, lock_reason: lang === 'en' ? lockReasonEn : lockReasonPt };
+        }
+      }
+      return { ...m, is_locked: false, lock_reason: null };
+    });
   } catch (err) {
     if (isMissingTableError(err, "user_missions")) {
       const [missions] = await db.query(
         `SELECT m.id,
-                m.title,
-                m.description,
+                ${titleCol} AS title,
+                ${descCol} AS description,
                 m.type,
                 m.access,
                 IFNULL(m.verification_type, 'photo') AS verification_type,
+                m.target_kwh,
                 m.reward_points AS points,
                 m.created_at,
                   CASE
@@ -70,16 +95,47 @@ async function getUserMissions(userId, isPremium = false) {
          FROM missions m
          WHERE m.active = 1
                 AND ${MISSION_AVAILABILITY_CONDITION}
+                AND m.verification_type != 'invoice_kwh_reduce'
          ${accessFilter}
          ORDER BY m.created_at DESC`
       );
-      return missions;
+      // aplica o mesmo lock logic no fallback
+      const firstAt2 = await getFirstInvoiceConfirmedAt(userId);
+      const has2 = firstAt2 !== null;
+      const lrPt = 'Submete e confirma a tua primeira fatura para desbloquear esta missão.';
+      const lrEn = 'Upload and confirm your first invoice to unlock this mission.';
+      return missions.map(m => {
+        if (m.verification_type === 'invoice_kwh_below') {
+          if (!has2) return { ...m, is_locked: true, lock_reason: lang === 'en' ? lrEn : lrPt };
+        }
+        return { ...m, is_locked: false, lock_reason: null };
+      });    }
+    if (err.code === 'ER_BAD_FIELD_ERROR' && lang === 'en') {
+      return getUserMissions(userId, isPremium, 'pt');
     }
     throw err;
   }
 }
 
-// Obter uma missão específica com estado do utilizador
+/**
+ * Returns the date of the user's first confirmed energy invoice, or null if none.
+ */
+async function getFirstInvoiceConfirmedAt(userId) {
+  try {
+    const [rows] = await db.query(
+      `SELECT MIN(COALESCE(confirmed_at, created_at)) AS first_at
+       FROM energy_invoices WHERE user_id = ? AND status = 'confirmed'`,
+      [userId]
+    );
+    return rows[0]?.first_at ?? null;
+  } catch (_) {
+    return null;
+  }
+}
+
+/**
+ * Obter uma missão específica com estado do utilizador
+ */
 async function getUserMissionById(missionId, userId) {
   const [missions] = await db.query(
     `SELECT m.id,
@@ -88,6 +144,7 @@ async function getUserMissionById(missionId, userId) {
             m.type,
             m.access,
             IFNULL(m.verification_type, 'photo') AS verification_type,
+            m.target_kwh,
             m.reward_points AS points,
             m.created_at,
             CASE
@@ -106,7 +163,8 @@ async function getUserMissionById(missionId, userId) {
            AND um.user_id = ?
      WHERE m.id = ?
        AND m.active = 1
-       AND ${MISSION_AVAILABILITY_CONDITION}`,
+       AND ${MISSION_AVAILABILITY_CONDITION}
+       AND m.verification_type != 'invoice_kwh_reduce'`,
     [userId, missionId]
   );
   return missions.length > 0 ? missions[0] : null;
@@ -174,7 +232,7 @@ async function checkAndCompleteInvoiceMissions(userId, kwh, previousKwh, invoice
      FROM missions m
      LEFT JOIN user_missions um ON um.mission_id = m.id AND um.user_id = ?
      WHERE m.active = 1
-       AND m.verification_type IN ('invoice_kwh_below', 'invoice_kwh_reduce')
+       AND m.verification_type IN ('invoice_kwh_below')
        AND um.id IS NULL
        AND ${MISSION_AVAILABILITY_CONDITION}`,
     [userId]
@@ -185,9 +243,6 @@ async function checkAndCompleteInvoiceMissions(userId, kwh, previousKwh, invoice
 
     if (mission.verification_type === "invoice_kwh_below" && mission.target_kwh !== null) {
       qualifies = kwh < mission.target_kwh;
-    } else if (mission.verification_type === "invoice_kwh_reduce") {
-      // Only qualifies if we have a previous reading to compare
-      qualifies = previousKwh !== null && kwh < previousKwh;
     }
 
     if (!qualifies) continue;
@@ -232,15 +287,23 @@ async function checkAndCompleteInvoiceMissions(userId, kwh, previousKwh, invoice
 }
 
 // Histórico do utilizador: missões expiradas (concluídas ou falhadas) + concluídas ainda ativas
-async function getUserMissionsHistory(userId) {
+async function getUserMissionsHistory(userId, lang = 'pt') {
+  const titleCol = lang === 'en'
+    ? "COALESCE(NULLIF(m.title_en, ''), m.title)"
+    : "m.title";
+  const descCol = lang === 'en'
+    ? "COALESCE(NULLIF(m.description_en, ''), m.description)"
+    : "m.description";
+
   try {
     const [rows] = await db.query(
       `SELECT m.id,
-              m.title,
-              m.description,
+              ${titleCol} AS title,
+              ${descCol} AS description,
               m.type,
               m.access,
               IFNULL(m.verification_type, 'photo') AS verification_type,
+              m.target_kwh,
               m.reward_points AS points,
               m.created_at,
               CASE
@@ -252,13 +315,18 @@ async function getUserMissionsHistory(userId) {
               um.completed_at
        FROM missions m
        INNER JOIN user_missions um ON um.mission_id = m.id AND um.user_id = ?
+       WHERE m.verification_type != 'invoice_kwh_reduce'
        ORDER BY um.completed_at DESC
        LIMIT 60`,
       [userId]
     );
+
     return rows;
   } catch (err) {
     if (isMissingTableError(err, "user_missions")) return [];
+    if (err.code === 'ER_BAD_FIELD_ERROR' && lang === 'en') {
+      return getUserMissionsHistory(userId, 'pt');
+    }
     throw err;
   }
 }

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useLanguage } from "@/app/components/LanguageProvider";
+import { fixEncoding } from "@/lib/fixEncoding";
 
 type Product = {
   id: number;
@@ -10,6 +11,7 @@ type Product = {
   points: number;
   stock: number;
   description?: string;
+  image_url?: string;
 };
 
 type SelectionState = Record<number, number>;
@@ -36,6 +38,7 @@ export default function LojaDePontosPage() {
     full_name: "", address: "", city: "", postal_code: "", phone: "", notes: ""
   });
   const [submitting, setSubmitting] = useState(false);
+  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -129,6 +132,27 @@ export default function LojaDePontosPage() {
 
   if (loading) return <p>{t("Carregando loja...")}</p>;
 
+  /* ── Lightbox ── */
+  const Lightbox = lightboxUrl ? (
+    <div
+      onClick={() => setLightboxUrl(null)}
+      style={{ position: "fixed", inset: 0, backgroundColor: "rgba(0,0,0,0.85)", zIndex: 2000, display: "flex", alignItems: "center", justifyContent: "center", cursor: "zoom-out" }}
+    >
+      <img
+        src={lightboxUrl}
+        alt=""
+        style={{ maxWidth: "90vw", maxHeight: "90vh", borderRadius: 8, objectFit: "contain", boxShadow: "0 8px 40px rgba(0,0,0,0.6)" }}
+        onClick={e => e.stopPropagation()}
+      />
+      <button
+        onClick={() => setLightboxUrl(null)}
+        style={{ position: "absolute", top: 16, right: 20, background: "none", border: "none", color: "#fff", fontSize: 32, cursor: "pointer", lineHeight: 1 }}
+      >
+        ×
+      </button>
+    </div>
+  ) : null;
+
   const inputStyle: React.CSSProperties = {
     width: "100%", padding: "8px 10px", borderRadius: 6,
     border: "1px solid #d1d5db", fontSize: 14, boxSizing: "border-box",
@@ -136,6 +160,7 @@ export default function LojaDePontosPage() {
 
   return (
     <div style={{ padding: 40, maxWidth: 1100, margin: "0 auto" }}>
+      {Lightbox}
 
       {/* Modal morada de entrega */}
       {addressModal && (
@@ -243,11 +268,32 @@ export default function LojaDePontosPage() {
 
           return (
             <div key={product.id} style={cardStyle}>
+              {product.image_url && (
+                <div style={{ position: "relative", marginBottom: 12 }}>
+                  <img
+                    src={product.image_url}
+                    alt={fixEncoding(product.name)}
+                    style={{ width: "100%", height: 180, objectFit: "cover", borderRadius: 6, display: "block" }}
+                    onError={(e) => { (e.target as HTMLImageElement).parentElement!.style.display = "none"; }}
+                  />
+                  <button
+                    onClick={() => setLightboxUrl(product.image_url!)}
+                    style={{
+                      position: "absolute", bottom: 8, right: 8,
+                      backgroundColor: "rgba(0,0,0,0.55)", color: "#fff",
+                      border: "none", borderRadius: 6, padding: "4px 10px",
+                      fontSize: 12, cursor: "pointer", backdropFilter: "blur(2px)",
+                    }}
+                  >
+                    🔍 Ver imagem
+                  </button>
+                </div>
+              )}
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                 <div>
-                  <h2 style={{ margin: "0 0 8px 0" }}>{product.name}</h2>
+                  <h2 style={{ margin: "0 0 8px 0" }}>{fixEncoding(product.name)}</h2>
                   <p style={{ margin: 0, fontSize: 12, color: "#555" }}>
-                    {product.partnerName ? `Loja: ${product.partnerName}` : "Loja: EcoHint"}
+                    {product.partnerName ? `${t("Loja")}: ${product.partnerName}` : `${t("Loja")}: EcoHint`}
                   </p>
                 </div>
                 <div

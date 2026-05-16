@@ -62,6 +62,8 @@ async function registerTokenOnBackend(token: string) {
   const authToken = localStorage.getItem("token");
   if (!authToken) return;
 
+  const lang = localStorage.getItem("language") || "pt";
+
   try {
     await fetch("/api/user/notifications/register-token", {
       method: "POST",
@@ -69,7 +71,7 @@ async function registerTokenOnBackend(token: string) {
         "Content-Type": "application/json",
         Authorization: `Bearer ${authToken}`,
       },
-      body: JSON.stringify({ token }),
+      body: JSON.stringify({ token, lang }),
     });
   } catch (err) {
     console.error("Error registering FCM token:", err);

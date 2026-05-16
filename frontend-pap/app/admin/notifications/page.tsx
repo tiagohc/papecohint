@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useLanguage } from "@/app/components/LanguageProvider";
+import { fixEncoding } from "@/lib/fixEncoding";
 import {
   adminFormGridStyle,
   adminInputStyle,
@@ -174,9 +175,9 @@ export default function AdminNotificationsPage() {
                 <tr key={notif.id} style={adminTableRowStyle(idx)}>
                   <td style={adminTableCellStyle}>{notif.id}</td>
                   <td style={adminTableCellStyle}>{notif.user_name || `#${notif.user_id}`}</td>
-                  <td style={adminTableCellStyle}>{notif.title}</td>
+                  <td style={adminTableCellStyle}>{fixEncoding(notif.title)}</td>
                   <td style={adminTableCellStyle}>
-                    {notif.message.length > 50 ? notif.message.slice(0, 50) + "..." : notif.message}
+                    {fixEncoding(notif.message).length > 50 ? fixEncoding(notif.message).slice(0, 50) + "..." : fixEncoding(notif.message)}
                   </td>
                   <td style={adminTableCellStyle}>
                     <span

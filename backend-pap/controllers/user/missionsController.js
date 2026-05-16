@@ -70,6 +70,7 @@ function validatePhotoLocally(photoUrl) {
 async function getUserMissions(req, res) {
   try {
     const userId = req.user.id;
+    const lang = (req.query.lang || req.headers['accept-language'] || 'pt').startsWith('en') ? 'en' : 'pt';
 
     let isPremium = false;
     try {
@@ -79,7 +80,7 @@ async function getUserMissions(req, res) {
       // tabela user_premium pode não existir — tratar como não premium
     }
 
-    const missions = await getMissionsFromDB(userId, isPremium);
+    const missions = await getMissionsFromDB(userId, isPremium, lang);
 
     res.json(missions);
   } catch (err) {
@@ -391,7 +392,8 @@ async function previewTicket(req, res) {
 async function getMissionsHistory(req, res) {
   try {
     const userId = req.user.id;
-    const history = await getUserMissionsHistory(userId);
+    const lang = (req.query.lang || req.headers['accept-language'] || 'pt').startsWith('en') ? 'en' : 'pt';
+    const history = await getUserMissionsHistory(userId, lang);
     res.json(history);
   } catch (err) {
     console.error(err);

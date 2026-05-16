@@ -9,6 +9,7 @@ const {
   getPendingRewards,
   approveReward,
   rejectReward,
+  getRedemptions,
 } = require("../../controllers/admin/rewardsController");
 const { auth, adminOnly } = require("../../authMiddleware");
 
@@ -19,6 +20,7 @@ router.use(auth);
 router.post("/", adminOnly, createReward);
 router.get("/", adminOnly, getRewards);
 router.get("/pending", adminOnly, getPendingRewards);
+router.get("/redemptions", adminOnly, getRedemptions);
 router.get("/:id", adminOnly, getReward);
 router.put("/:id", adminOnly, updateReward);
 router.delete("/:id", adminOnly, deleteReward);

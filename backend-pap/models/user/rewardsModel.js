@@ -45,20 +45,32 @@ async function deductPoints(userId, points) {
 
 // Registrar resgate de recompensa com morada de entrega
 async function recordRedemption(userId, rewardId, pointsUsed, address = {}) {
-  const [result] = await db.query(
-    `INSERT INTO redemptions (user_id, reward_id, points_used, full_name, address, city, postal_code, phone, notes)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [userId, rewardId, pointsUsed,
-     address.full_name || null,
-     address.address || null,
-     address.city || null,
-     address.postal_code || null,
-     address.phone || null,
-     address.notes || null]
-  );
-  // Decrementar stock
-  await db.query("UPDATE rewards SET stock = stock - 1 WHERE id = ? AND stock > 0", [rewardId]);
-  return result.insertId;
+  try {
+    const [result] = await db.query(
+      `INSERT INTO redemptions (user_id, reward_id, points_used, full_name, address, city, postal_code, phone, notes)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [userId, rewardId, pointsUsed,
+       address.full_name || null,
+       address.address || null,
+       address.city || null,
+       address.postal_code || null,
+       address.phone || null,
+       address.notes || null]
+    );
+    await db.query("UPDATE rewards SET stock = stock - 1 WHERE id = ? AND stock > 0", [rewardId]);
+    return result.insertId;
+  } catch (err) {
+    // Fallback: tabela redemptions sem colunas de morada (migração ainda não aplicada)
+    if (err.code === "ER_BAD_FIELD_ERROR") {
+      const [result] = await db.query(
+        "INSERT INTO redemptions (user_id, reward_id, points_used) VALUES (?, ?, ?)",
+        [userId, rewardId, pointsUsed]
+      );
+      await db.query("UPDATE rewards SET stock = stock - 1 WHERE id = ? AND stock > 0", [rewardId]);
+      return result.insertId;
+    }
+    throw err;
+  }
 }
 
 module.exports = {

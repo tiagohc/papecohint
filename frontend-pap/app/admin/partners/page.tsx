@@ -54,11 +54,16 @@ export default function PartnersPage() {
   useEffect(() => { fetchPartners(); }, [token]);
 
   const handleDeletePartner = async (id: number) => {
-    if (!confirm(t("Apagar parceiro?"))) return;
-    await fetch(`/api/admin/partners/${id}`, {
+    if (!confirm(t("Apagar parceiro? Esta ação remove também todos os seus produtos e resgates."))) return;
+    const res = await fetch(`/api/admin/partners/${id}`, {
       method: "DELETE",
       headers: { Authorization: `Bearer ${token}` },
     });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      alert(data?.error || t("Erro ao apagar parceiro"));
+      return;
+    }
     fetchPartners();
   };
 

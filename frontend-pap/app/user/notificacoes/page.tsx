@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useLanguage } from "@/app/components/LanguageProvider";
+import { fixEncoding } from "@/lib/fixEncoding";
 
 type Notification = {
   id: number;
@@ -192,14 +193,14 @@ export default function NotificacoesPage() {
                 <div style={{ flex: 1 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                     <h3 style={{ margin: "0 0 4px 0", fontSize: 16, fontWeight: 600 }}>
-                      {notif.title}
+                      {fixEncoding(notif.title)}
                     </h3>
                     <span style={{ fontSize: 12, color: "#666" }}>
                       {formatTimeAgo(notif.created_at)}
                     </span>
                   </div>
                   <p style={{ margin: 0, color: "#444", fontSize: 14 }}>
-                    {notif.message}
+                    {fixEncoding(notif.message)}
                   </p>
                   {notif.read_status === 0 && (
                     <button

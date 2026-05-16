@@ -1,47 +1,27 @@
 const bcrypt = require("bcryptjs");
-const fs = require("fs");
-const path = require("path");
-const multer = require("multer");
 const { getProfileById, updateProfile: updateProfileModel, updateAvatar, getPasswordByUserId, updatePassword } = require("../../models/user/profileModel");
+const { validatePassword } = require("../../utils/passwordValidator");
 
-const avatarStorage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const dir = path.join(__dirname, "../../uploads/avatars");
-    fs.mkdirSync(dir, { recursive: true });
-    cb(null, dir);
-  },
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname) || ".jpg";
-    cb(null, `user_${req.user.id}_${Date.now()}${ext}`);
-  },
-});
-
-const avatarUpload = multer({
-  storage: avatarStorage,
-  limits: { fileSize: 5 * 1024 * 1024 },
-  fileFilter: (req, file, cb) => {
-    if (["image/jpeg", "image/png", "image/webp", "image/gif"].includes(file.mimetype)) cb(null, true);
-    else cb(new Error("Apenas imagens são permitidas"));
-  },
-}).single("avatar");
-
-// Recebe um ficheiro de imagem, guarda em disco e actualiza avatar_url na BD
+// Recebe base64 data URI e guarda directamente na BD (sem ficheiro em disco)
 async function uploadAvatarHandler(req, res) {
-  avatarUpload(req, res, async (err) => {
-    if (err) return res.status(400).json({ error: err.message });
-    if (!req.file) return res.status(400).json({ error: "Nenhuma imagem enviada" });
-
-    const userId = req.user.id;
-    const avatarUrl = `/uploads/avatars/${req.file.filename}`;
-
-    try {
-      await updateAvatar(userId, avatarUrl);
-      res.json({ avatar_url: avatarUrl });
-    } catch (e) {
-      console.error(e);
-      res.status(500).json({ error: "Erro ao guardar avatar" });
-    }
-  });
+  const { base64 } = req.body;
+  if (!base64 || typeof base64 !== "string") {
+    return res.status(400).json({ error: "Imagem não fornecida" });
+  }
+  if (!base64.startsWith("data:image/")) {
+    return res.status(400).json({ error: "Formato inválido" });
+  }
+  // Limit ~2MB base64
+  if (Buffer.byteLength(base64, "utf8") > 2 * 1024 * 1024) {
+    return res.status(400).json({ error: "Imagem demasiado grande (máx 2MB)" });
+  }
+  try {
+    await updateAvatar(req.user.id, base64);
+    res.json({ avatar_url: base64 });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "Erro ao guardar avatar" });
+  }
 }
 
 // Devolve o perfil completo do utilizador autenticado
@@ -88,6 +68,9 @@ async function changePassword(req, res) {
     if (!currentPassword || !newPassword) {
       return res.status(400).json({ error: "Senha atual e nova senha são obrigatórias" });
     }
+
+    const pwCheck = validatePassword(newPassword);
+    if (!pwCheck.valid) return res.status(400).json({ error: pwCheck.error });
 
     const hashedPassword = await getPasswordByUserId(userId);
 

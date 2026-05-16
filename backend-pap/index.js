@@ -8,7 +8,7 @@ const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 const db = require("./db"); // 🔹 conexão MySQL
 const { auth } = require("./authMiddleware");
-const { login, register, forgotPassword, resetPassword } = require("./controllers/authController");
+const { login, register, forgotPassword, resetPassword, verifyEmail } = require("./controllers/authController");
 const { handleStripeWebhook, handleEasypayWebhook } = require("./controllers/paymentsController");
 
 // ============================================
@@ -35,6 +35,11 @@ const userEnergyInvoicesRoutes = require("./routes/user/energyInvoices");
 const userAliasesRoutes = require("./routes/user/aliases");
 const userDocumentsRoutes = require("./routes/user/documents");
 const partnerRewardsRoutes = require("./routes/partner/rewards");
+const partnerSettingsRoutes = require("./routes/partner/settings");
+const adminSettingsRoutes = require("./routes/admin/settings");
+
+// Trust proxy (required for express-rate-limit behind Next.js / reverse proxy)
+app.set("trust proxy", 1);
 
 // middlewares
 const allowedOrigins = process.env.ALLOWED_ORIGINS
@@ -94,6 +99,7 @@ app.get('/', (req, res) => {
 // ============================================
 app.post("/login", login);
 app.post("/register", register);
+app.get("/verify-email", verifyEmail);
 app.post("/forgot-password", forgotPassword);
 app.post("/reset-password", resetPassword);
 
@@ -143,6 +149,7 @@ app.use("/admin/reports", adminReportsRoutes);
 app.use("/admin/missions", adminMissionsRoutes);
 app.use("/admin/notifications", adminNotificationsRoutes);
 app.use("/admin/invoices", adminInvoicesRoutes);
+app.use("/admin/settings", adminSettingsRoutes);
 
 // ============================================
 // ROTAS DO USUÁRIO (COM AUTH)
@@ -157,6 +164,7 @@ app.use("/user/energy-invoices", userEnergyInvoicesRoutes);
 app.use("/user/aliases", userAliasesRoutes);
 app.use("/user/documents", userDocumentsRoutes);
 app.use("/partner/rewards", partnerRewardsRoutes);
+app.use("/partner/settings", partnerSettingsRoutes);
 
 // Ranking público para utilizadores autenticados
 app.get("/user/ranking", authMiddleware, async (req, res) => {
@@ -302,6 +310,13 @@ db.query("ALTER TABLE users ADD COLUMN username VARCHAR(50) NULL AFTER name")
   .catch(err => { if (err.code !== "ER_DUP_FIELDNAME") console.error("Migration username:", err.message); });
 
 // iniciar servidor
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   console.log(`API a correr na porta ${PORT}`);
+  // Ensure avatar_url column is large enough for base64 data URIs
+  try {
+    await db.query("ALTER TABLE users MODIFY COLUMN avatar_url MEDIUMTEXT");
+    console.log("Migration: avatar_url column updated");
+  } catch (e) {
+    // Already the right type or no change needed — safe to ignore
+  }
 });
