@@ -473,7 +473,7 @@ export const translations = {
     "Define o nome, a descrição, os pontos e o stock inicial do novo produto.": "Define o nome, a descrição, os pontos e o stock inicial do novo produto.",
     "Nome do produto": "Nome do produto",
     "URL da imagem (opcional)": "URL da imagem (opcional)",
-    "A guardar...": "A guardar...",
+    // "A guardar...": "A guardar...", // Removed duplicate
     "Catálogo atual": "Catálogo atual",
     "Atualiza pontos e stock diretamente na tabela.": "Atualiza pontos e stock diretamente na tabela.",
     "itens": "itens",
