@@ -32,7 +32,7 @@ export const translations = {
     "Erro ao redefinir password": "Erro ao redefinir password",
     "Password alterada com sucesso. A redirecionar para o login...": "Password alterada com sucesso. A redirecionar para o login...",
     "Erro de ligação ao servidor": "Erro de ligação ao servidor",
-    "Nova password": "Nova password",
+    // "Nova password": "Nova password", // Removed duplicate
     "Confirmar password": "Confirmar password",
     "Alterar password": "Alterar password",
 
