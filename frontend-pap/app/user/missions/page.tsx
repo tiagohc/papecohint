@@ -479,17 +479,13 @@ export default function MissionsPage() {
 
   const isTicketMission = (m: Mission) => m.verification_type === "transport_ticket";
   const isInvoiceMission = (m: Mission) => m.verification_type === "invoice_kwh_below";
-  const isFirstInvoiceMission = (m: Mission) => m.verification_type === "first_invoice";
+
 
   // Missão de onboarding ainda por completar
-  const onboardingPending = missions.find(m => isFirstInvoiceMission(m) && m.isCompleted === 0);
+
 
   const getMissionDescription = (mission: Mission) => {
-    if (mission.verification_type === "first_invoice") {
-      return language === "en"
-        ? "Upload and confirm your first energy invoice to unlock saving missions!"
-        : "Envia e confirma a tua primeira fatura de energia para desbloquear as missões de poupança!";
-    }
+  
     if (mission.verification_type === "invoice_kwh_below" && mission.target_kwh) {
       return language === "en"
         ? `Submit an energy invoice with consumption below ${mission.target_kwh} kWh.`
@@ -506,7 +502,7 @@ export default function MissionsPage() {
       </p>
 
       {/* Banner de onboarding — só aparece se a missão de primeira fatura ainda não foi completada */}
-      {onboardingPending && (
+      { (
         <div style={{
           display: "flex", alignItems: "center", gap: 16,
           backgroundColor: "#fef3c7", border: "1.5px solid #f59e0b",
@@ -563,12 +559,10 @@ export default function MissionsPage() {
             const remaining = getRemainingSeconds(mission);
             const isTicket = isTicketMission(mission);
             const isInvoice = isInvoiceMission(mission);
-            const isFirstInvoice = isFirstInvoiceMission(mission);
             const isThisSubmitting = submitting === mission.id
               || (previewing && previewingMissionId === mission.id)
               || (uploadingInvoice && previewingInvoiceMissionId === mission.id);
-            // Força missões de energia a nunca ficarem locked
-            const isLocked = mission.is_locked && !isInvoice;
+            const isLocked = !!mission.is_locked;
 
             return (
               <div key={mission.id} style={{
@@ -579,18 +573,8 @@ export default function MissionsPage() {
                   <div style={{ flex: 1 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
                       <h3 style={{ margin: 0, fontSize: 20 }}>{fixEncoding(mission.title)}</h3>
-                      {isFirstInvoice && (
-                        <span style={{
-                          padding: "2px 8px",
-                          backgroundColor: "#fef3c7",
-                          color: "#92400e",
-                          borderRadius: 12,
-                          fontSize: 11,
-                          fontWeight: "bold",
-                        }}>
-                          ⚡ {t("Onboarding")}
-                        </span>
-                      )}
+                     
+                    
                       {isTicket && (
                         <span style={{
                           padding: "2px 8px",
@@ -660,77 +644,102 @@ export default function MissionsPage() {
                     </div>
                   </div>
 
-                  {/* Action Buttons */}
-                  <div style={{ marginLeft: 20 }}>
-                    {isLocked ? (
-                      <div style={{
-                        backgroundColor: "#f3f4f6",
-                        borderRadius: 8,
-                        border: "1px dashed #9ca3af",
-                        maxWidth: 180,
-                        textAlign: "center",
-                      }}>
-                        <span style={{ fontSize: 22 }}>🔒</span>
-                        <span style={{ fontSize: 12, color: "#6b7280", lineHeight: 1.4 }}>
-                          {mission.lock_reason || t("Indisponível de momento")}
-                        </span>
-                      </div>
-                    ) : isInvoice ? (
-                      <button
-                        style={actionButtonStyle(isThisSubmitting, "#0f766e")}
-                        onClick={() => handleInvoiceSelect(mission.id)}
-                        disabled={isThisSubmitting}
-                      >
-                        {isThisSubmitting ? t("A analisar...") : t("Submeter Fatura")}
-                      </button>
-                    ) : isFirstInvoice ? (
-                        <span style={{ fontSize: 12, color: "#6b7280", lineHeight: 1.4 }}>
-                          {mission.lock_reason || t("Indisponível de momento")}
-                        </span>
-                      </div>
-                    ) : isFirstInvoice ? (
-                      <button
-                        style={actionButtonStyle(false, "#f59e0b")}
-                        onClick={() => router.push("/user/faturas")}
-                      >
-                        {language === "en" ? "Submit Invoice" : "Submeter Fatura"}
-                      </button>
-                    ) : !mission.isCompleted ? (
-                      isTicket ? (
-                        <button
-                          style={actionButtonStyle(isThisSubmitting, "#0f766e")}
-                          onClick={() => handleTicketSelect(mission.id)}
-                          disabled={isThisSubmitting}
-                        >
-                          {previewing && previewingMissionId === mission.id
-                            ? t("A analisar...")
-                            : t("Submeter Bilhete")}
-                        </button>
-                      ) : isInvoice ? (
-                        <button
-                          style={actionButtonStyle(isThisSubmitting, "#d97706")}
-                          onClick={() => handleInvoiceSelect(mission.id)}
-                          disabled={isThisSubmitting}
-                        >
-                          {uploadingInvoice && previewingInvoiceMissionId === mission.id
-                            ? t("A analisar...")
-                            : t("Submeter Fatura")}
-                        </button>
-                      ) : (
-                        <button
-                          style={actionButtonStyle(isThisSubmitting)}
-                          onClick={() => handleFileSelect(mission.id)}
-                          disabled={isThisSubmitting}
-                        >
-                          {submitting === mission.id ? t("Enviando...") : t("Submeter Foto")}
-                        </button>
-                      )
-                    ) : (
-                      <button style={actionButtonStyle(true)} disabled>
-                        {t("Concluída")}
-                      </button>
-                    )}
-                  </div>
+                {/* Action Buttons */}
+<div style={{ marginLeft: 20 }}>
+  {isLocked ? (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        gap: 6,
+        padding: "10px 14px",
+        backgroundColor: "#f3f4f6",
+        borderRadius: 8,
+        border: "1px dashed #9ca3af",
+        maxWidth: 180,
+        textAlign: "center",
+      }}
+    >
+      <span style={{ fontSize: 22 }}>🔒</span>
+
+      <span
+        style={{
+          fontSize: 12,
+          color: "#6b7280",
+          lineHeight: 1.4,
+        }}
+      >
+        {mission.lock_reason || t("Indisponível de momento")}
+      </span>
+    </div>
+  ) : !mission.isCompleted ? (
+    isTicket ? (
+      <button
+        style={actionButtonStyle(isThisSubmitting, "#0f766e")}
+        onClick={() => handleTicketSelect(mission.id)}
+        disabled={isThisSubmitting}
+      >
+        {previewing && previewingMissionId === mission.id
+          ? t("A analisar...")
+          : t("Submeter Bilhete")}
+      </button>
+    ) : isInvoice ? (
+      <button
+        style={actionButtonStyle(isThisSubmitting, "#d97706")}
+        onClick={() => handleInvoiceSelect(mission.id)}
+        disabled={isThisSubmitting}
+      >
+        {uploadingInvoice &&
+        previewingInvoiceMissionId === mission.id
+          ? t("A analisar...")
+          : t("Submeter Fatura")}
+      </button>
+    ) : mission.verification_type ===
+      "invoice_kwh_below" ? (
+      <button
+        style={actionButtonStyle(isThisSubmitting, "#d97706")}
+        onClick={() => handleInvoiceSelect(mission.id)}
+        disabled={isThisSubmitting}
+      >
+        {uploadingInvoice &&
+        previewingInvoiceMissionId === mission.id
+          ? t("A analisar...")
+          : t("Submeter Fatura")}
+      </button>
+    ) : mission.verification_type ===
+      "transport_ticket" ? (
+      <button
+        style={actionButtonStyle(isThisSubmitting, "#0f766e")}
+        onClick={() => handleTicketSelect(mission.id)}
+        disabled={isThisSubmitting}
+      >
+        {previewing && previewingMissionId === mission.id
+          ? t("A analisar...")
+          : t("Submeter Bilhete")}
+      </button>
+    ) : (
+      <div
+        style={{
+          padding: "8px 16px",
+          backgroundColor: "#f3f4f6",
+          color: "#6b7280",
+          borderRadius: 8,
+          fontWeight: 600,
+          fontSize: 14,
+          border: "1px dashed #d1d5db",
+          textAlign: "center",
+        }}
+      >
+        {t("Em breve")}
+      </div>
+    )
+  ) : (
+    <button style={actionButtonStyle(true)} disabled>
+      {t("Concluída")}
+    </button>
+  )}
+</div>
                 </div>
 
                 {mission.image_url && (
