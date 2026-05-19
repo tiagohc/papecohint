@@ -118,7 +118,7 @@ export default function MissionsPage() {
     }).catch(console.error);
   }, [token, language]);
 
-  // â”€â”€ Photo flow â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+ 
   const handleFileSelect = (missionId: number) => {
     setSelectedMissionId(missionId);
     fileInputRef.current?.click();
@@ -167,7 +167,7 @@ export default function MissionsPage() {
     reader.readAsDataURL(file);
   };
 
-  // â”€â”€ Ticket flow â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  
   const handleTicketSelect = (missionId: number) => {
     setPreviewingMissionId(missionId);
     ticketInputRef.current?.click();
@@ -372,7 +372,6 @@ export default function MissionsPage() {
     if (invoiceInputRef.current) invoiceInputRef.current.value = "";
   };
 
-  // â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const refreshMissions = async () => {
     if (!token) return;
     const [active, hist, me] = await Promise.all([
