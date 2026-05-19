@@ -567,7 +567,7 @@ export const translations = {
     "Erro ao redefinir password": "Error resetting password",
     "Password alterada com sucesso. A redirecionar para o login...": "Password changed successfully. Redirecting to login...",
     "Erro de ligação ao servidor": "Server connection error",
-    "Nova password": "New password",
+    // "Nova password": "New password", // Removed duplicate
     "Confirmar password": "Confirm password",
     "Alterar password": "Change password",
 
@@ -1008,7 +1008,7 @@ export const translations = {
     "Define o nome, a descrição, os pontos e o stock inicial do novo produto.": "Set the name, description, points and initial stock of the new product.",
     "Nome do produto": "Product name",
     "URL da imagem (opcional)": "Image URL (optional)",
-    "A guardar...": "Saving...",
+    // "A guardar...": "Saving...", // Removed duplicate
     "Catálogo atual": "Current catalogue",
     "Atualiza pontos e stock diretamente na tabela.": "Update points and stock directly in the table.",
     "itens": "items",
