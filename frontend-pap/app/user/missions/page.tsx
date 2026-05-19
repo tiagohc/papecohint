@@ -1,9 +1,8 @@
 ﻿"use client";
 
 import { useEffect, useState, useRef } from "react";
+import { getLevelFromPoints } from "@/lib/progress";
 import { useLanguage } from "@/app/components/LanguageProvider";
-import { fixEncoding } from "@/lib/fixEncoding";
-import { useRouter } from "next/navigation";
 
 type Mission = {
   id: number;
@@ -11,15 +10,12 @@ type Mission = {
   description: string;
   type: "daily" | "monthly";
   access?: "free" | "premium";
-  verification_type?: "photo" | "transport_ticket" | "invoice_kwh_below";
-  target_kwh?: number | null;
+  verification_type?: "photo" | "transport_ticket" | "invoice_kwh_below" | "invoice_kwh_reduce";
   points: number;
   created_at?: string;
   expires_at?: string;
   image_url?: string;
   isCompleted: number;
-  is_locked?: boolean;
-  lock_reason?: string | null;
 };
 
 type TicketPreview = {
@@ -53,8 +49,7 @@ type InvoiceUploadResult = {
 };
 
 export default function MissionsPage() {
-  const { t, language } = useLanguage();
-  const router = useRouter();
+  const { t } = useLanguage();
   const [missions, setMissions] = useState<Mission[]>([]);
   const [history, setHistory] = useState<Mission[]>([]);
   const [activeTab, setActiveTab] = useState<"daily" | "monthly" | "history">("daily");
@@ -98,8 +93,8 @@ export default function MissionsPage() {
     if (!token) return;
 
     Promise.all([
-      fetch(`/api/user/missions?lang=${language}`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
-      fetch(`/api/user/missions/history?lang=${language}`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()).catch(() => []),
+      fetch("/api/user/missions", { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
+      fetch("/api/user/missions/history", { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()).catch(() => []),
       fetch("/api/me", { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()).catch(() => null),
     ]).then(([active, hist, me]) => {
       const missionsData = Array.isArray(active) ? active : [];
@@ -116,7 +111,7 @@ export default function MissionsPage() {
       }
       setLoading(false);
     }).catch(console.error);
-  }, [token, language]);
+  }, [token]);
 
   // â”€â”€ Photo flow â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const handleFileSelect = (missionId: number) => {
@@ -157,7 +152,7 @@ export default function MissionsPage() {
           alert(payload?.error || t("Erro ao submeter missão"));
         }
       } catch {
-        alert(t("Erro ao submeter missão"));
+        alert(t("Erro ao submeter missÃ£o"));
       } finally {
         setSubmitting(null);
         setSelectedMissionId(null);
@@ -376,8 +371,8 @@ export default function MissionsPage() {
   const refreshMissions = async () => {
     if (!token) return;
     const [active, hist, me] = await Promise.all([
-      fetch(`/api/user/missions?lang=${language}`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()).catch(() => []),
-      fetch(`/api/user/missions/history?lang=${language}`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()).catch(() => []),
+      fetch("/api/user/missions", { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()).catch(() => []),
+      fetch("/api/user/missions/history", { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()).catch(() => []),
       fetch("/api/me", { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()).catch(() => null),
     ]);
     const missionsData = Array.isArray(active) ? active : [];
@@ -401,16 +396,16 @@ export default function MissionsPage() {
   const missionCardStyle = {
     padding: 20,
     borderRadius: 8,
-    backgroundColor: "var(--bg-card, #fff)",
+    backgroundColor: "#fff",
     boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
     marginBottom: 15,
-    border: "1px solid var(--border, #e5e7eb)",
+    border: "1px solid #e5e7eb",
   };
 
   const tabButtonStyle = (isActive: boolean) => ({
     padding: "10px 20px",
-    backgroundColor: isActive ? "#22c55e" : "var(--bg-secondary, #f3f4f6)",
-    color: isActive ? "#fff" : "var(--text-secondary, #666)",
+    backgroundColor: isActive ? "#22c55e" : "#f3f4f6",
+    color: isActive ? "#fff" : "#666",
     border: "none",
     borderRadius: 5,
     cursor: "pointer",
@@ -478,25 +473,8 @@ export default function MissionsPage() {
   });
 
   const isTicketMission = (m: Mission) => m.verification_type === "transport_ticket";
-  const isInvoiceMission = (m: Mission) => m.verification_type === "invoice_kwh_below";
-  const isFirstInvoiceMission = (m: Mission) => m.verification_type === "first_invoice";
-
-  // Missão de onboarding ainda por completar
-  const onboardingPending = missions.find(m => isFirstInvoiceMission(m) && m.isCompleted === 0);
-
-  const getMissionDescription = (mission: Mission) => {
-    if (mission.verification_type === "first_invoice") {
-      return language === "en"
-        ? "Upload and confirm your first energy invoice to unlock saving missions!"
-        : "Envia e confirma a tua primeira fatura de energia para desbloquear as missões de poupança!";
-    }
-    if (mission.verification_type === "invoice_kwh_below" && mission.target_kwh) {
-      return language === "en"
-        ? `Submit an energy invoice with consumption below ${mission.target_kwh} kWh.`
-        : `Submete uma fatura de energia com consumo abaixo de ${mission.target_kwh} kWh.`;
-    }
-    return fixEncoding(mission.description);
-  };
+  const isInvoiceMission = (m: Mission) =>
+    m.verification_type === "invoice_kwh_below" || m.verification_type === "invoice_kwh_reduce";
 
   return (
     <div style={{ padding: 40, maxWidth: 1000, margin: "0 auto" }}>
@@ -504,37 +482,6 @@ export default function MissionsPage() {
       <p style={{ color: "#666", marginBottom: 30 }}>
         {t("Complete missões e ganhe pontos EcoHint!")}
       </p>
-
-      {/* Banner de onboarding — só aparece se a missão de primeira fatura ainda não foi completada */}
-      {onboardingPending && (
-        <div style={{
-          display: "flex", alignItems: "center", gap: 16,
-          backgroundColor: "#fef3c7", border: "1.5px solid #f59e0b",
-          borderRadius: 12, padding: "16px 20px", marginBottom: 24,
-        }}>
-          <span style={{ fontSize: 28 }}>⚡</span>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontWeight: 700, color: "#92400e", fontSize: 15, marginBottom: 2 }}>
-              {language === "en" ? "Start here: Submit your first invoice" : "Comece aqui: Submete a tua primeira fatura"}
-            </div>
-            <div style={{ fontSize: 13, color: "#78350f" }}>
-              {language === "en"
-                ? "Submit your first energy invoice to unlock the monthly saving missions."
-                : "Envia a tua primeira fatura de energia para desbloquear as missões mensais de poupança."}
-            </div>
-          </div>
-          <button
-            onClick={() => router.push("/user/faturas")}
-            style={{
-              padding: "9px 18px", borderRadius: 8, border: "none",
-              backgroundColor: "#f59e0b", color: "#fff",
-              fontWeight: 700, fontSize: 13, cursor: "pointer", whiteSpace: "nowrap",
-            }}
-          >
-            {language === "en" ? "Go to Invoices" : "Ir para Faturas"}
-          </button>
-        </div>
-      )}
 
       {/* Tabs */}
       <div style={{ marginBottom: 30 }}>
@@ -563,33 +510,16 @@ export default function MissionsPage() {
             const remaining = getRemainingSeconds(mission);
             const isTicket = isTicketMission(mission);
             const isInvoice = isInvoiceMission(mission);
-            const isFirstInvoice = isFirstInvoiceMission(mission);
             const isThisSubmitting = submitting === mission.id
               || (previewing && previewingMissionId === mission.id)
               || (uploadingInvoice && previewingInvoiceMissionId === mission.id);
-            const isLocked = !!mission.is_locked;
 
             return (
-              <div key={mission.id} style={{
-                ...missionCardStyle,
-                ...(isLocked ? { opacity: 0.7, backgroundColor: "var(--bg-secondary, #f9fafb)", border: "1px dashed var(--border, #d1d5db)" } : {}),
-              }}>
+              <div key={mission.id} style={missionCardStyle}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start" }}>
                   <div style={{ flex: 1 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                      <h3 style={{ margin: 0, fontSize: 20 }}>{fixEncoding(mission.title)}</h3>
-                      {isFirstInvoice && (
-                        <span style={{
-                          padding: "2px 8px",
-                          backgroundColor: "#fef3c7",
-                          color: "#92400e",
-                          borderRadius: 12,
-                          fontSize: 11,
-                          fontWeight: "bold",
-                        }}>
-                          ⚡ {t("Onboarding")}
-                        </span>
-                      )}
+                      <h3 style={{ margin: 0, fontSize: 20 }}>{mission.title}</h3>
                       {isTicket && (
                         <span style={{
                           padding: "2px 8px",
@@ -616,7 +546,7 @@ export default function MissionsPage() {
                       )}
                     </div>
                     <p style={{ margin: "0 0 10px 0", color: "#666", fontSize: 14 }}>
-                      {getMissionDescription(mission)}
+                      {mission.description}
                     </p>
                     <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -661,32 +591,7 @@ export default function MissionsPage() {
 
                   {/* Action Buttons */}
                   <div style={{ marginLeft: 20 }}>
-                    {isLocked ? (
-                      <div style={{
-                        display: "flex",
-                        flexDirection: "column",
-                        alignItems: "center",
-                        gap: 6,
-                        padding: "10px 14px",
-                        backgroundColor: "#f3f4f6",
-                        borderRadius: 8,
-                        border: "1px dashed #9ca3af",
-                        maxWidth: 180,
-                        textAlign: "center",
-                      }}>
-                        <span style={{ fontSize: 22 }}>🔒</span>
-                        <span style={{ fontSize: 12, color: "#6b7280", lineHeight: 1.4 }}>
-                          {mission.lock_reason || t("Indisponível de momento")}
-                        </span>
-                      </div>
-                    ) : isFirstInvoice ? (
-                      <button
-                        style={actionButtonStyle(false, "#f59e0b")}
-                        onClick={() => router.push("/user/faturas")}
-                      >
-                        {language === "en" ? "Submit Invoice" : "Submeter Fatura"}
-                      </button>
-                    ) : !mission.isCompleted ? (
+                    {!mission.isCompleted ? (
                       isTicket ? (
                         <button
                           style={actionButtonStyle(isThisSubmitting, "#0f766e")}
@@ -760,7 +665,7 @@ export default function MissionsPage() {
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start" }}>
                     <div style={{ flex: 1 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                        <h3 style={{ margin: 0, fontSize: 18, color: "var(--text-main, #374151)" }}>{fixEncoding(mission.title)}</h3>
+                        <h3 style={{ margin: 0, fontSize: 18, color: "#374151" }}>{mission.title}</h3>
                         <span style={{
                           padding: "2px 10px", borderRadius: 12, fontSize: 11, fontWeight: "bold",
                           backgroundColor: completed ? "#d1fae5" : "#f3f4f6",
@@ -770,7 +675,7 @@ export default function MissionsPage() {
                         </span>
                       </div>
                       <p style={{ margin: "0 0 8px 0", color: "#9ca3af", fontSize: 13 }}>
-                        {getMissionDescription(mission)}
+                        {mission.description}
                       </p>
                       <div style={{ display: "flex", gap: 10, flexWrap: "wrap", fontSize: 12, color: "#6b7280" }}>
                         <span>+{mission.points} pts</span>
