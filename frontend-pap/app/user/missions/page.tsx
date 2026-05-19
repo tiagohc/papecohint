@@ -493,44 +493,74 @@ export default function MissionsPage() {
     }
     return fixEncoding(mission.description);
   };
+return (
+  <div style={{ padding: 40, maxWidth: 1000, margin: "0 auto" }}>
+    <h1>{t("Missões")}</h1>
 
-  return (
-    <div style={{ padding: 40, maxWidth: 1000, margin: "0 auto" }}>
-      <h1>{t("Missões")}</h1>
-      <p style={{ color: "#666", marginBottom: 30 }}>
-        {t("Complete missões e ganhe pontos EcoHint!")}
-      </p>
+    <p style={{ color: "#666", marginBottom: 30 }}>
+      {t("Complete missões e ganhe pontos EcoHint!")}
+    </p>
 
-      {/* Banner de onboarding — só aparece se a missão de primeira fatura ainda não foi completada */}
-      { (
-        <div style={{
-          display: "flex", alignItems: "center", gap: 16,
-          backgroundColor: "#fef3c7", border: "1.5px solid #f59e0b",
-          borderRadius: 12, padding: "16px 20px", marginBottom: 24,
-        }}>
-          <span style={{ fontSize: 28 }}>⚡</span>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontWeight: 700, color: "#92400e", fontSize: 15, marginBottom: 2 }}>
-              {language === "en" ? "Start here: Submit your first invoice" : "Comece aqui: Submete a tua primeira fatura"}
-            </div>
-            <div style={{ fontSize: 13, color: "#78350f" }}>
-              {language === "en"
-                ? "Submit your first energy invoice to unlock the monthly saving missions."
-                : "Envia a tua primeira fatura de energia para desbloquear as missões mensais de poupança."}
-            </div>
-          </div>
-          <button
-            onClick={() => router.push("/user/faturas")}
-            style={{
-              padding: "9px 18px", borderRadius: 8, border: "none",
-              backgroundColor: "#f59e0b", color: "#fff",
-              fontWeight: 700, fontSize: 13, cursor: "pointer", whiteSpace: "nowrap",
-            }}
-          >
-            {language === "en" ? "Go to Invoices" : "Ir para Faturas"}
-          </button>
+    {/* Banner de onboarding */}
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 16,
+        backgroundColor: "#fef3c7",
+        border: "1.5px solid #f59e0b",
+        borderRadius: 12,
+        padding: "16px 20px",
+        marginBottom: 24,
+      }}
+    >
+      <span style={{ fontSize: 28 }}>⚡</span>
+
+      <div style={{ flex: 1 }}>
+        <div
+          style={{
+            fontWeight: 700,
+            color: "#92400e",
+            fontSize: 15,
+            marginBottom: 2,
+          }}
+        >
+          {language === "en"
+            ? "Start here: Submit your first invoice"
+            : "Comece aqui: Submete a tua primeira fatura"}
         </div>
-      )}
+
+        <div
+          style={{
+            fontSize: 13,
+            color: "#78350f",
+          }}
+        >
+          {language === "en"
+            ? "Submit your first energy invoice to unlock the monthly saving missions."
+            : "Envia a tua primeira fatura de energia para desbloquear as missões mensais de poupança."}
+        </div>
+      </div>
+
+      <button
+        onClick={() => router.push("/user/faturas")}
+        style={{
+          padding: "9px 18px",
+          borderRadius: 8,
+          border: "none",
+          backgroundColor: "#f59e0b",
+          color: "#fff",
+          fontWeight: 700,
+          fontSize: 13,
+          cursor: "pointer",
+          whiteSpace: "nowrap",
+        }}
+      >
+        {language === "en"
+          ? "Go to Invoices"
+          : "Ir para Faturas"}
+      </button>
+    </div>
 
       {/* Tabs */}
       <div style={{ marginBottom: 30 }}>
