@@ -479,17 +479,11 @@ export default function MissionsPage() {
 
   const isTicketMission = (m: Mission) => m.verification_type === "transport_ticket";
   const isInvoiceMission = (m: Mission) => m.verification_type === "invoice_kwh_below";
-  const isFirstInvoiceMission = (m: Mission) => m.verification_type === "first_invoice";
-
-  // Missão de onboarding ainda por completar
-  const onboardingPending = missions.find(m => isFirstInvoiceMission(m) && m.isCompleted === 0);
+ 
 
   const getMissionDescription = (mission: Mission) => {
-    if (mission.verification_type === "first_invoice") {
-      return language === "en"
-        ? "Upload and confirm your first energy invoice to unlock saving missions!"
-        : "Envia e confirma a tua primeira fatura de energia para desbloquear as missões de poupança!";
-    }
+  
+
     if (mission.verification_type === "invoice_kwh_below" && mission.target_kwh) {
       return language === "en"
         ? `Submit an energy invoice with consumption below ${mission.target_kwh} kWh.`
@@ -506,7 +500,7 @@ export default function MissionsPage() {
       </p>
 
       {/* Banner de onboarding — só aparece se a missão de primeira fatura ainda não foi completada */}
-      {onboardingPending && (
+      { (
         <div style={{
           display: "flex", alignItems: "center", gap: 16,
           backgroundColor: "#fef3c7", border: "1.5px solid #f59e0b",
@@ -563,7 +557,7 @@ export default function MissionsPage() {
             const remaining = getRemainingSeconds(mission);
             const isTicket = isTicketMission(mission);
             const isInvoice = isInvoiceMission(mission);
-            const isFirstInvoice = isFirstInvoiceMission(mission);
+           
             const isThisSubmitting = submitting === mission.id
               || (previewing && previewingMissionId === mission.id)
               || (uploadingInvoice && previewingInvoiceMissionId === mission.id);
@@ -578,7 +572,7 @@ export default function MissionsPage() {
                   <div style={{ flex: 1 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
                       <h3 style={{ margin: 0, fontSize: 20 }}>{fixEncoding(mission.title)}</h3>
-                      {isFirstInvoice && (
+                      { (
                         <span style={{
                           padding: "2px 8px",
                           backgroundColor: "#fef3c7",
@@ -679,7 +673,7 @@ export default function MissionsPage() {
                           {mission.lock_reason || t("Indisponível de momento")}
                         </span>
                       </div>
-                    ) : isFirstInvoice ? (
+                    ) :missionsCompleted ? (
                       <button
                         style={actionButtonStyle(false, "#f59e0b")}
                         onClick={() => router.push("/user/faturas")}
